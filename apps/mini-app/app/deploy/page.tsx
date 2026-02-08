@@ -37,10 +37,10 @@ export default function DeployPage() {
 
       <div className="space-y-2">
         <GlowText as="h1" color="cyan" className="text-lg font-bold">
-          Deploy New Clawbot
+          Deploy New Agent
         </GlowText>
         <p className="text-sm text-terminal-dim">
-          Launch a clawbot agent, auto-claimed to your Alien identity.
+          Launch an agent, auto-linked to your Alien identity.
         </p>
       </div>
 

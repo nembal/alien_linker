@@ -1,4 +1,4 @@
-# OpenClaw Linker — Product Requirements Document
+# AlienClaw Linker — Product Requirements Document
 
 **Version:** 1.1
 **Date:** 2026-02-08
@@ -8,7 +8,7 @@
 
 ## 1. Problem Statement
 
-OpenClaw agents (clawbots) run on user infrastructure (VPS, Mac Mini, home servers) but have no portable identity. There is no way to say "this agent is mine" in a verifiable, interoperable way. Users in the Alien ecosystem have a strong identity (Alien ID) but no way to bind it to their agents.
+AlienClaw agents (clawbots) run on user infrastructure (VPS, Mac Mini, home servers) but have no portable identity. There is no way to say "this agent is mine" in a verifiable, interoperable way. Users in the Alien ecosystem have a strong identity (Alien ID) but no way to bind it to their agents.
 
 **We solve this**: a mini app inside Alien that lets users claim, manage, and deploy their clawbots — with cryptographic proof of ownership.
 
@@ -37,7 +37,7 @@ OpenClaw agents (clawbots) run on user infrastructure (VPS, Mac Mini, home serve
 
 | User | Description |
 |------|-------------|
-| **Clawbot Owner** | Has an Alien account. Runs (or wants to run) an OpenClaw agent on their own infrastructure. Interacts via the Alien mini app. |
+| **Clawbot Owner** | Has an Alien account. Runs (or wants to run) an AlienClaw agent on their own infrastructure. Interacts via the Alien mini app. |
 | **Third Party** | Any service or agent that wants to verify "does this clawbot belong to this Alien user?" Uses the attestation + challenge-response. |
 
 ---
@@ -85,9 +85,9 @@ See [DOCS/arch.md](./arch.md) for the full technical architecture.
 
 **Trigger:** Clawbot starts on user's infrastructure.
 
-1. On first boot, clawbot generates an **ed25519 keypair** via `@openclaw/identity`
-2. Stores private key at `~/.openclaw/identity.key` (mode 0600)
-3. Stores public key at `~/.openclaw/identity.pub`
+1. On first boot, clawbot generates an **ed25519 keypair** via `@alienclaw/identity`
+2. Stores private key at `~/.alienclaw/identity.key` (mode 0600)
+3. Stores public key at `~/.alienclaw/identity.pub`
 4. Calls `POST /api/clawbots/register` with:
    ```json
    {
@@ -125,11 +125,11 @@ See [DOCS/arch.md](./arch.md) for the full technical architecture.
    - Creates **signed ownership attestation** with backend ed25519 key:
      ```json
      {
-       "type": "openclaw-ownership-v1",
+       "type": "alienclaw-ownership-v1",
        "alienId": "alien-user-abc123",
        "clawbotId": "cbot_abc123def456",
        "publicKey": "ed25519:base64...",
-       "issuedBy": "https://openclaw-linker.vercel.app",
+       "issuedBy": "https://alienclaw-linker.vercel.app",
        "issuedAt": "2026-02-08T12:03:00.000Z",
        "expiresAt": "2027-02-08T12:03:00.000Z",
        "signature": "base64..."
@@ -137,7 +137,7 @@ See [DOCS/arch.md](./arch.md) for the full technical architecture.
      ```
    - Links `alienId` to clawbot, stores attestation, nulls claim code
    - Delivers attestation to clawbot via `POST {endpoint}/attestation` (best-effort)
-8. Clawbot receives and stores attestation at `~/.openclaw/attestation.json`
+8. Clawbot receives and stores attestation at `~/.alienclaw/attestation.json`
 9. Mini app redirects to success screen (animated checkmark)
 
 ### 5.3 One-Click Deploy (stub)
@@ -157,7 +157,7 @@ See [DOCS/arch.md](./arch.md) for the full technical architecture.
 
 1. Third party calls `GET {clawbot_endpoint}/identity`
 2. Clawbot returns its attestation (public, non-secret)
-3. Third party verifies `signature` against the backend's public key from `/.well-known/openclaw-keys.json`
+3. Third party verifies `signature` against the backend's public key from `/.well-known/alienclaw-keys.json`
 4. Third party sends a **challenge**: `POST {clawbot_endpoint}/challenge` with `{ "nonce": "random..." }`
 5. Clawbot signs the nonce with its private key, returns `{ "nonce", "signature", "publicKey" }`
 6. Third party verifies the signature against the `publicKey` in the attestation
@@ -245,7 +245,7 @@ In development mode, mock JWT tokens ending in `.dev` are accepted for local tes
 | `POST` | `/api/deploy` | Alien JWT | Create deploy job (stub) |
 | `GET` | `/api/deploy/[id]` | Alien JWT | Poll deploy job status (stub) |
 | `GET` | `/api/health` | None | Health check |
-| `GET` | `/.well-known/openclaw-keys.json` | None | Backend's public signing key in JWK format |
+| `GET` | `/.well-known/alienclaw-keys.json` | None | Backend's public signing key in JWK format |
 
 ---
 
@@ -265,19 +265,19 @@ In development mode, mock JWT tokens ending in `.dev` are accepted for local tes
 
 ---
 
-## 9. Clawbot Identity SDK (`@openclaw/identity`)
+## 9. Clawbot Identity SDK (`@alienclaw/identity`)
 
 A minimal package for clawbot operators. Lives in `packages/identity/`.
 
 ### Usage
 
 ```typescript
-import { initIdentity } from "@openclaw/identity";
+import { initIdentity } from "@alienclaw/identity";
 
 const identity = await initIdentity({
   name: "my-research-bot",
   endpoint: "https://my-vps:3001",
-  linkerUrl: "https://openclaw-linker.vercel.app",
+  linkerUrl: "https://alienclaw-linker.vercel.app",
   port: 3001,
 });
 
@@ -292,9 +292,9 @@ const identity = await initIdentity({
 
 | Module | Responsibility |
 |--------|---------------|
-| `keypair.ts` | Generate/load ed25519 keypair from `~/.openclaw/` |
+| `keypair.ts` | Generate/load ed25519 keypair from `~/.alienclaw/` |
 | `register.ts` | `POST /api/clawbots/register` to linker backend |
-| `attestation.ts` | Save/load attestation at `~/.openclaw/attestation.json` |
+| `attestation.ts` | Save/load attestation at `~/.alienclaw/attestation.json` |
 | `server.ts` | Hono routes: `GET /identity`, `POST /challenge`, `POST /attestation` |
 | `index.ts` | `initIdentity()` orchestrator — keypair + register + server + ASCII display |
 
@@ -313,7 +313,7 @@ BOT_NAME=my-bot LINKER_URL=http://localhost:3000 npx tsx packages/identity/src/i
 |---------|------------|
 | Claim code brute-force | 6 digits = 1M combinations. Codes expire in 15 minutes. Single-use. |
 | Stolen claim code | Short expiry window. User must also have valid Alien JWT. |
-| Attestation forgery | Signed with backend's ed25519 key. Public key published at `/.well-known/openclaw-keys.json`. |
+| Attestation forgery | Signed with backend's ed25519 key. Public key published at `/.well-known/alienclaw-keys.json`. |
 | Clawbot impersonation | Challenge-response with the private key. Only the real clawbot has it. |
 | JWT replay | Alien JWTs have `exp` claim. Backend checks expiration via `@alien_org/auth-client`. |
 | Dev mode tokens | Mock JWTs only accepted when `NODE_ENV=development`. Tokens marked with `.dev` suffix. |
@@ -345,8 +345,8 @@ BOT_NAME=my-bot LINKER_URL=http://localhost:3000 npx tsx packages/identity/src/i
   ```json
   {
     "@context": ["https://www.w3.org/2018/credentials/v1"],
-    "type": ["VerifiableCredential", "OpenClawOwnership"],
-    "issuer": "did:web:openclaw-linker.vercel.app",
+    "type": ["VerifiableCredential", "AlienClawOwnership"],
+    "issuer": "did:web:alienclaw-linker.vercel.app",
     "credentialSubject": {
       "id": "did:key:z6Mk...",
       "alienId": "alien-user-abc123",
@@ -372,7 +372,7 @@ BOT_NAME=my-bot LINKER_URL=http://localhost:3000 npx tsx packages/identity/src/i
     "name": "my-research-bot",
     "services": [
       { "name": "alien", "endpoint": "alien-user-abc123" },
-      { "name": "openclaw", "endpoint": "https://my-vps:3000" }
+      { "name": "alienclaw", "endpoint": "https://my-vps:3000" }
     ]
   }
   ```

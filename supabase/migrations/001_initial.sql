@@ -1,4 +1,4 @@
--- OpenClaw Linker — Initial Schema
+-- AlienClaw Linker — Initial Schema
 
 -- clawbots: registered clawbot agents
 create table clawbots (

@@ -3,8 +3,8 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
-const OPENCLAW_DIR = join(homedir(), ".alienclaw");
-const ATTESTATION_PATH = join(OPENCLAW_DIR, "attestation.json");
+const ALIENCLAW_DIR = join(homedir(), ".alienclaw");
+const ATTESTATION_PATH = join(ALIENCLAW_DIR, "attestation.json");
 
 export interface OwnershipAttestation {
   type: string;
@@ -23,8 +23,8 @@ export interface OwnershipAttestation {
 export async function saveAttestation(
   attestation: OwnershipAttestation
 ): Promise<void> {
-  if (!existsSync(OPENCLAW_DIR)) {
-    await mkdir(OPENCLAW_DIR, { recursive: true });
+  if (!existsSync(ALIENCLAW_DIR)) {
+    await mkdir(ALIENCLAW_DIR, { recursive: true });
   }
   await writeFile(
     ATTESTATION_PATH,

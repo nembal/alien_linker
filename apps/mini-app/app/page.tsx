@@ -9,6 +9,7 @@ import { GlowText } from "@/components/ui/glow-text";
 import { TypingText } from "@/components/ui/typing-text";
 import { BotCard } from "@/components/bot-card";
 import { PageTransition } from "@/components/layout/page-transition";
+import { CopyBlock } from "@/components/ui/copy-block";
 import { useClawbots } from "@/hooks/use-clawbots";
 
 const ASCII_ROBOT = `
@@ -17,7 +18,7 @@ const ASCII_ROBOT = `
     │  ▽  │
     ╰──┬──╯
    ╭───┴───╮
-   │ CLAW  │
+   │ ALIEN │
    ╰───────╯
 `;
 
@@ -30,7 +31,7 @@ export default function Dashboard() {
 
       <div className="text-center">
         <GlowText color="cyan" className="text-xs uppercase tracking-widest">
-          Identity Linker
+          Agent Identity Linker
         </GlowText>
       </div>
 
@@ -57,7 +58,7 @@ export default function Dashboard() {
           <>
             <div className="flex items-center justify-between px-1">
               <GlowText color="green" className="text-xs uppercase tracking-wider">
-                My Clawbots
+                My Agents
               </GlowText>
               <span className="text-xs text-terminal-dim">
                 {clawbots.length} linked
@@ -80,22 +81,39 @@ export default function Dashboard() {
               {ASCII_ROBOT}
             </pre>
             <div className="mt-2 text-center text-sm text-terminal-text">
-              <TypingText text="No clawbots linked yet. Claim or deploy one to get started." />
+              <TypingText text="No agents linked yet. Run the identity SDK on your agent, then claim it here." />
             </div>
           </TerminalCard>
         )}
       </div>
 
+      {/* Quick Setup Hint */}
+      {clawbots.length === 0 && !loading && (
+        <TerminalCard glow="cyan">
+          <div className="space-y-3 text-xs">
+            <p className="text-terminal-text">
+              To link an agent, install the identity SDK on it:
+            </p>
+            <CopyBlock text="bun add @alienclaw/identity" />
+            <p className="text-terminal-dim">
+              Then call{" "}
+              <span className="text-terminal-cyan">initIdentity()</span>{" "}
+              in your agent. A 6-digit code will appear in the terminal.
+            </p>
+          </div>
+        </TerminalCard>
+      )}
+
       {/* Action Buttons */}
       <div className="space-y-3">
         <Link href="/claim" className="block">
           <TerminalButton variant="primary" className="w-full">
-            Claim a Clawbot
+            Link an Agent
           </TerminalButton>
         </Link>
         <Link href="/deploy" className="block">
           <TerminalButton variant="secondary" className="w-full">
-            Deploy New Clawbot
+            Deploy New Agent
           </TerminalButton>
         </Link>
       </div>

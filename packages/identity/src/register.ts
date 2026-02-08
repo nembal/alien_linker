@@ -12,7 +12,7 @@ export interface RegisterResult {
 }
 
 /**
- * Registers this clawbot with the OpenClaw Linker backend.
+ * Registers this clawbot with the AlienClaw Linker backend.
  * Returns a clawbot ID and a 6-digit claim code.
  */
 export async function registerClawbot(

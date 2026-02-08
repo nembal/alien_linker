@@ -9,9 +9,9 @@ import { webcrypto } from "node:crypto";
 ed.etc.sha512Async = async (msg: Uint8Array) =>
   new Uint8Array(await webcrypto.subtle.digest("SHA-512", msg));
 
-const OPENCLAW_DIR = join(homedir(), ".alienclaw");
-const PRIVATE_KEY_PATH = join(OPENCLAW_DIR, "identity.key");
-const PUBLIC_KEY_PATH = join(OPENCLAW_DIR, "identity.pub");
+const ALIENCLAW_DIR = join(homedir(), ".alienclaw");
+const PRIVATE_KEY_PATH = join(ALIENCLAW_DIR, "identity.key");
+const PUBLIC_KEY_PATH = join(ALIENCLAW_DIR, "identity.pub");
 
 export interface Keypair {
   privateKey: Uint8Array;
@@ -43,8 +43,8 @@ export async function loadOrCreateKeypair(): Promise<Keypair> {
  * Generates a new ed25519 keypair and saves to ~/.alienclaw/.
  */
 export async function generateKeypair(): Promise<Keypair> {
-  if (!existsSync(OPENCLAW_DIR)) {
-    await mkdir(OPENCLAW_DIR, { recursive: true });
+  if (!existsSync(ALIENCLAW_DIR)) {
+    await mkdir(ALIENCLAW_DIR, { recursive: true });
   }
 
   const privateKey = ed.utils.randomPrivateKey();

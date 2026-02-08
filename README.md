@@ -1,6 +1,6 @@
-# OpenClaw Linker
+# AlienClaw Linker
 
-Pair your OpenClaw agents (clawbots) to your Alien identity with cryptographic proof of ownership.
+Pair your AlienClaw agents (clawbots) to your Alien identity with cryptographic proof of ownership.
 
 An Alien mini app that lets users claim, manage, and deploy clawbots using ed25519 keypairs and signed attestations.
 
@@ -42,7 +42,7 @@ curl http://localhost:3000/api/health
 # {"status":"ok","timestamp":"..."}
 
 # Public signing key — works if ATTESTATION_PUBLIC_KEY is set in .env.local
-curl http://localhost:3000/.well-known/openclaw-keys.json
+curl http://localhost:3000/.well-known/alienclaw-keys.json
 ```
 
 **API routes (requires Supabase):**
@@ -104,7 +104,7 @@ alien_linker/
 │   ├── components/         # Terminal-style UI components
 │   ├── hooks/              # React hooks (auth, clawbots, claim, deploy)
 │   └── lib/                # Server utils (auth, attestation, supabase)
-├── packages/identity/      # @openclaw/identity — clawbot SDK
+├── packages/identity/      # @alienclaw/identity — clawbot SDK
 │   └── src/                # Keypair, register, attestation, Hono server
 ├── supabase/migrations/    # Database schema SQL
 ├── scripts/                # Key generation
@@ -113,15 +113,15 @@ alien_linker/
 
 ## Clawbot SDK
 
-Install `@openclaw/identity` on your agent to integrate with the linker:
+Install `@alienclaw/identity` on your agent to integrate with the linker:
 
 ```typescript
-import { initIdentity } from "@openclaw/identity";
+import { initIdentity } from "@alienclaw/identity";
 
 const identity = await initIdentity({
   name: "my-research-bot",
   endpoint: "https://my-vps:3001",
-  linkerUrl: "https://openclaw-linker.vercel.app",
+  linkerUrl: "https://alienclaw-linker.vercel.app",
 });
 
 // Shows claim code in terminal
@@ -143,7 +143,7 @@ const identity = await initIdentity({
 | `POST` | `/api/deploy` | JWT | Create deploy job (stub) |
 | `GET` | `/api/deploy/[id]` | JWT | Poll deploy job status |
 | `GET` | `/api/health` | None | Health check |
-| `GET` | `/.well-known/openclaw-keys.json` | None | Backend's public signing key (JWK) |
+| `GET` | `/.well-known/alienclaw-keys.json` | None | Backend's public signing key (JWK) |
 
 ## Environment Variables
 

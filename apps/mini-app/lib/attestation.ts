@@ -85,7 +85,7 @@ export function base64ToBytes(base64: string): Uint8Array {
 
 /**
  * Returns the backend's public signing key in JWK format for
- * `/.well-known/openclaw-keys.json`.
+ * `/.well-known/alienclaw-keys.json`.
  */
 export function getPublicKeyJwk(): { kty: string; crv: string; x: string; use: string } | null {
   const publicKeyBase64 = process.env.ATTESTATION_PUBLIC_KEY;

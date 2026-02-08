@@ -33,10 +33,10 @@ export default function ClaimSuccessPage() {
         className="space-y-2"
       >
         <GlowText as="h1" color="green" className="text-xl font-bold">
-          Clawbot Claimed!
+          Agent Linked!
         </GlowText>
         <p className="text-sm text-terminal-text">
-          Ownership attestation has been sent to your clawbot.
+          Ownership attestation has been sent to your agent.
         </p>
         <p className="text-xs text-terminal-dim">
           It can now cryptographically prove it belongs to you.

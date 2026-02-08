@@ -1,4 +1,4 @@
-# OpenClaw Linker — Technical Architecture
+# AlienClaw Linker — Technical Architecture
 
 ## System Overview
 
@@ -53,7 +53,7 @@
 │  └─────────────────┘  │  GET  /api/deploy/[id]        (JWT)      │ │
 │                        │  GET  /api/health             (none)     │ │
 │  ┌─────────────────┐  │  GET  /.well-known/            (none)     │ │
-│  │ lib/attestation  │  │       openclaw-keys.json                 │ │
+│  │ lib/attestation  │  │       alienclaw-keys.json                │ │
 │  │ .ts              │  └──────────────────────────────────────────┘ │
 │  │ createAttestat() │                                               │
 │  │ verifyAttestat() │                                               │
@@ -93,9 +93,9 @@
 │                    CLAWBOT (user infrastructure)                    │
 │                                                                     │
 │  ┌──────────────────────────────────────┐                          │
-│  │  @openclaw/identity SDK              │                          │
+│  │  @alienclaw/identity SDK             │                          │
 │  │                                      │                          │
-│  │  keypair.ts    ed25519 key mgmt      │  ~/.openclaw/            │
+│  │  keypair.ts    ed25519 key mgmt      │  ~/.alienclaw/           │
 │  │  register.ts   POST /register        │    identity.key (priv)   │
 │  │  attestation   save/load JSON        │    identity.pub          │
 │  │  server.ts     Hono identity routes  │    attestation.json      │
@@ -152,7 +152,7 @@ Clawbot                  Backend                Mini App            Alien App
 ```
 Backend ed25519 keypair (generated once, stored in env vars):
   ATTESTATION_PRIVATE_KEY (base64)  — signs attestations
-  ATTESTATION_PUBLIC_KEY  (base64)  — published at /.well-known/openclaw-keys.json
+  ATTESTATION_PUBLIC_KEY  (base64)  — published at /.well-known/alienclaw-keys.json
 
 Attestation payload (JSON-stringified, then signed):
   { type, alienId, clawbotId, publicKey, issuedBy, issuedAt, expiresAt }
@@ -163,7 +163,7 @@ Signature: ed25519(SHA-512(payload), privateKey) -> base64
 ### Clawbot Identity
 
 ```
-Clawbot ed25519 keypair (generated per bot, stored at ~/.openclaw/):
+Clawbot ed25519 keypair (generated per bot, stored at ~/.alienclaw/):
   identity.key  (raw 32 bytes, mode 0600)
   identity.pub  (raw 32 bytes)
 
@@ -188,13 +188,14 @@ In development (NODE_ENV=development):
 
 | Component | File | Purpose |
 |-----------|------|---------|
-| `TerminalCard` | `components/ui/terminal-card.tsx` | Glassmorphism card with title bar (red/yellow/green dots) |
+| `TerminalCard` | `components/ui/terminal-card.tsx` | Glassmorphism card with optional title bar and border glow |
 | `TerminalButton` | `components/ui/terminal-button.tsx` | Glow-on-hover, primary/secondary/ghost variants |
 | `TerminalInput` | `components/ui/terminal-input.tsx` | `> ` prefix, green caret |
 | `GlowText` | `components/ui/glow-text.tsx` | Text with configurable glow color |
-| `AsciiHeader` | `components/ui/ascii-header.tsx` | ASCII art "OPENCLAW" banner |
+| `AsciiHeader` | `components/ui/ascii-header.tsx` | ASCII art "ALIENCLAW" banner |
 | `TypingText` | `components/ui/typing-text.tsx` | Typewriter animation |
 | `StatusIndicator` | `components/ui/status-indicator.tsx` | Pulsing dot (green/amber/red) |
+| `CopyBlock` | `components/ui/copy-block.tsx` | Tap-to-copy code block for mobile |
 | `AppShell` | `components/layout/app-shell.tsx` | AlienProvider + AuthProvider + scanlines |
 | `PageTransition` | `components/layout/page-transition.tsx` | framer-motion fade transition |
 
