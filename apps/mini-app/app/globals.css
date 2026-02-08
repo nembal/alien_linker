@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+@theme {
+  --color-terminal-bg: #0a0a0a;
+  --color-terminal-surface: #111111;
+  --color-terminal-border: #1a1a2e;
+  --color-terminal-green: #00ff41;
+  --color-terminal-cyan: #00d4ff;
+  --color-terminal-amber: #ffb000;
+  --color-terminal-red: #ff0040;
+  --color-terminal-dim: #4a4a4a;
+  --color-terminal-text: #c0c0c0;
+  --color-terminal-bright: #ffffff;
+
+  --font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", ui-monospace, monospace;
+}
+
+/* CRT scanlines overlay */
+@keyframes scanlines {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 4px; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes flicker {
+  0% { opacity: 0.97; }
+  5% { opacity: 0.95; }
+  10% { opacity: 0.97; }
+  15% { opacity: 0.94; }
+  20% { opacity: 0.98; }
+  100% { opacity: 0.98; }
+}
+
+.scanlines::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.15) 0px,
+    rgba(0, 0, 0, 0.15) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  z-index: 9999;
+  animation: scanlines 0.1s linear infinite;
+}
+
+.glow-green {
+  text-shadow: 0 0 7px var(--color-terminal-green), 0 0 20px rgba(0, 255, 65, 0.3);
+}
+
+.glow-cyan {
+  text-shadow: 0 0 7px var(--color-terminal-cyan), 0 0 20px rgba(0, 212, 255, 0.3);
+}
+
+.glow-amber {
+  text-shadow: 0 0 7px var(--color-terminal-amber), 0 0 20px rgba(255, 176, 0, 0.3);
+}
+
+.glow-red {
+  text-shadow: 0 0 7px var(--color-terminal-red), 0 0 20px rgba(255, 0, 64, 0.3);
+}
+
+.border-glow-green {
+  box-shadow: 0 0 5px rgba(0, 255, 65, 0.15), inset 0 0 5px rgba(0, 255, 65, 0.05);
+}
+
+.border-glow-cyan {
+  box-shadow: 0 0 5px rgba(0, 212, 255, 0.15), inset 0 0 5px rgba(0, 212, 255, 0.05);
+}
+
+.cursor-blink {
+  animation: cursor-blink 1s step-end infinite;
+}
+
+body {
+  font-family: var(--font-mono);
+  background: var(--color-terminal-bg);
+  color: var(--color-terminal-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-terminal-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-terminal-dim);
+  border-radius: 2px;
+}

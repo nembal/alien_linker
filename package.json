@@ -1,0 +1,10 @@
+{
+  "name": "alien-linker",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "bun --filter './apps/mini-app' dev",
+    "build": "bun --filter './apps/mini-app' build",
+    "generate-keys": "bun run scripts/generate-keys.ts"
+  }
+}

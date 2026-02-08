@@ -1,8 +1,8 @@
 # OpenClaw Linker — Product Requirements Document
 
-**Version:** 1.0
+**Version:** 1.1
 **Date:** 2026-02-08
-**Status:** Hackathon MVP
+**Status:** Hackathon MVP — Layer 1 Implemented
 
 ---
 
@@ -16,20 +16,20 @@ OpenClaw agents (clawbots) run on user infrastructure (VPS, Mac Mini, home serve
 
 ## 2. Goals
 
-### Hackathon (Layer 1)
-- Pair a running clawbot to an Alien identity using a claim code
-- Give the clawbot a cryptographic keypair and a signed ownership attestation
-- Let users deploy a new clawbot with one click from within the Alien app
-- Clean, functional mini app UI inside Alien
+### Hackathon — Layer 1 (Implemented)
+- [x] Pair a running clawbot to an Alien identity using a claim code
+- [x] Give the clawbot a cryptographic keypair and a signed ownership attestation
+- [x] Let users deploy a new clawbot with one click from within the Alien app (stub)
+- [x] Terminal-style mini app UI inside Alien
 
-### Stretch (Layer 2)
-- Issue W3C Verifiable Credentials as the ownership proof format
-- Clawbot identity as `did:key:...`
+### Stretch — Layer 2
+- [ ] Issue W3C Verifiable Credentials as the ownership proof format
+- [ ] Clawbot identity as `did:key:...`
 
-### Future (Layer 3)
-- Register clawbots on-chain via ERC-8004 Identity Registry
-- On-chain attestation of Alien ID ownership via `setMetadata`
-- Reputation signals via ERC-8004 Reputation Registry
+### Future — Layer 3
+- [ ] Register clawbots on-chain via ERC-8004 Identity Registry
+- [ ] On-chain attestation of Alien ID ownership via `setMetadata`
+- [ ] Reputation signals via ERC-8004 Reputation Registry
 
 ---
 
@@ -49,20 +49,20 @@ OpenClaw agents (clawbots) run on user infrastructure (VPS, Mac Mini, home serve
 │     Alien App        │
 │  ┌────────────────┐  │
 │  │   Mini App     │  │    ┌─────────────────────┐
-│  │  (Next.js)     │──────▶│   Backend API       │
-│  │  - claim flow  │  │    │   (Next.js routes)  │
-│  │  - deploy flow │  │    │                     │
-│  │  - dashboard   │  │    │  - verify Alien JWT │
-│  └────────────────┘  │    │  - match claim codes│
-│                      │    │  - issue attestation│
-│  Alien ID via JWT    │    │  - trigger deploys  │
-└──────────────────────┘    └────────┬────────────┘
-                                     │
+│  │  (Next.js 15)  │──────▶│   Backend API       │
+│  │  - dashboard   │  │    │   (Next.js routes)  │
+│  │  - claim flow  │  │    │                     │
+│  │  - deploy flow │  │    │  - verify Alien JWT │
+│  │  - bot detail  │  │    │  - match claim codes│
+│  └────────────────┘  │    │  - sign attestation │
+│                      │    │  - deploy jobs      │
+│  Alien ID via JWT    │    └────────┬────────────┘
+└──────────────────────┘             │
                             ┌────────▼────────────┐
                             │     Supabase        │
-                            │  - clawbots table   │
-                            │  - claims table     │
-                            │  - deploy_jobs table│
+                            │  - clawbots         │
+                            │  - deploy_jobs      │
+                            │  - attestation_keys │
                             └─────────────────────┘
                                      │
               ┌──────────────────────┼──────────────────────┐
@@ -75,160 +75,130 @@ OpenClaw agents (clawbots) run on user infrastructure (VPS, Mac Mini, home serve
      └─────────────┘      └─────────────┘        └─────────────┘
 ```
 
+See [DOCS/arch.md](./arch.md) for the full technical architecture.
+
 ---
 
 ## 5. Core Flows
 
-### 5.1 Clawbot Registration (clawbot → backend)
+### 5.1 Clawbot Registration (clawbot -> backend)
 
 **Trigger:** Clawbot starts on user's infrastructure.
 
-1. On first boot, clawbot generates an **ed25519 keypair**
-2. Stores private key at `~/.openclaw/identity.key`
+1. On first boot, clawbot generates an **ed25519 keypair** via `@openclaw/identity`
+2. Stores private key at `~/.openclaw/identity.key` (mode 0600)
 3. Stores public key at `~/.openclaw/identity.pub`
 4. Calls `POST /api/clawbots/register` with:
    ```json
    {
      "publicKey": "ed25519:base64...",
      "name": "my-clawbot",
-     "endpoint": "https://my-vps:3000"
+     "endpoint": "https://my-vps:3001"
    }
    ```
-5. Backend generates a **6-digit claim code** (expires in 15 minutes)
-6. Backend stores: `clawbot_id`, `public_key`, `claim_code`, `claim_code_expires_at`, `name`, `endpoint`
-7. Returns to clawbot:
+5. Backend generates a `cbot_` + nanoid ID and a **6-digit claim code** (expires in 15 minutes)
+6. Returns to clawbot:
    ```json
    {
-     "clawbotId": "cbot_abc123",
+     "clawbotId": "cbot_abc123def456",
      "claimCode": "847293",
-     "expiresAt": "2026-02-08T12:15:00Z"
+     "expiresAt": "2026-02-08T12:15:00.000Z"
    }
    ```
-8. Clawbot displays claim code in terminal:
-   ```
-   ╔══════════════════════════════════════╗
-   ║  Your claim code:  847293           ║
-   ║  Enter this in the Alien mini app   ║
-   ║  Expires in 15 minutes              ║
-   ╚══════════════════════════════════════╝
-   ```
+7. Clawbot displays claim code in terminal with ASCII box
+8. Clawbot starts Hono identity server (`GET /identity`, `POST /challenge`, `POST /attestation`)
 
-### 5.2 Claim Flow (user → mini app → backend)
+### 5.2 Claim Flow (user -> mini app -> backend)
 
 **Trigger:** User opens the mini app inside Alien.
 
 1. Mini app loads inside Alien WebView
 2. `AlienProvider` initializes, `useAlien()` provides `authToken`
-3. Backend verifies JWT via `@alien_org/auth-client`, extracts `sub` (Alien ID)
-4. User sees their dashboard:
-   - List of already-claimed clawbots (if any)
-   - "Claim a clawbot" button
-   - "Deploy new clawbot" button
-5. User taps "Claim a clawbot"
-6. User enters the 6-digit claim code from their terminal
-7. Frontend calls `POST /api/clawbots/claim` with:
-   ```json
-   {
-     "claimCode": "847293"
-   }
-   ```
-   (Authorization header carries the Alien JWT)
-8. Backend:
-   - Verifies JWT → gets `alienId`
-   - Looks up claim code → finds matching clawbot
+3. User sees their dashboard (ASCII header, bot list, action buttons)
+4. User taps "Claim a Clawbot"
+5. User enters the 6-digit claim code (premium digit-box input with auto-advance and paste support)
+6. Frontend calls `POST /api/clawbots/claim` with `{ "claimCode": "847293" }` + JWT
+7. Backend:
+   - Verifies JWT via `@alien_org/auth-client` -> extracts `alienId` (sub claim)
+   - Looks up claim code -> finds matching unclaimed clawbot
    - Checks code not expired
-   - Checks clawbot not already claimed
-   - Links: `alienId` ↔ `clawbotId`
-   - Generates **signed ownership attestation**:
+   - Creates **signed ownership attestation** with backend ed25519 key:
      ```json
      {
        "type": "openclaw-ownership-v1",
        "alienId": "alien-user-abc123",
-       "clawbotId": "cbot_abc123",
+       "clawbotId": "cbot_abc123def456",
        "publicKey": "ed25519:base64...",
        "issuedBy": "https://openclaw-linker.vercel.app",
-       "issuedAt": "2026-02-08T12:03:00Z",
-       "expiresAt": "2027-02-08T12:03:00Z",
+       "issuedAt": "2026-02-08T12:03:00.000Z",
+       "expiresAt": "2027-02-08T12:03:00.000Z",
        "signature": "base64..."
      }
      ```
-   - Stores attestation in DB
-   - Sends attestation to clawbot via its registered endpoint: `POST {endpoint}/attestation`
-9. Clawbot receives and stores attestation at `~/.openclaw/attestation.json`
-10. Mini app shows success: "Clawbot claimed! ✓"
+   - Links `alienId` to clawbot, stores attestation, nulls claim code
+   - Delivers attestation to clawbot via `POST {endpoint}/attestation` (best-effort)
+8. Clawbot receives and stores attestation at `~/.openclaw/attestation.json`
+9. Mini app redirects to success screen (animated checkmark)
 
-### 5.3 One-Click Deploy (user → mini app → backend → cloud)
+### 5.3 One-Click Deploy (stub)
 
-**Trigger:** User taps "Deploy new clawbot" in the mini app.
+**Current status:** UI and API are implemented as stubs. The deploy form creates a `deploy_jobs` record with status `pending`, but no actual infrastructure provisioning occurs.
 
-1. User fills in:
-   - **Name** for the clawbot
-   - **Description** (optional)
-   - **Template/config** (preset or custom — future: pick model, tools, etc.)
-2. Frontend calls `POST /api/clawbots/deploy` with config + Alien JWT
-3. Backend:
-   - Verifies JWT → gets `alienId`
-   - Creates a `deploy_job` record (status: `pending`)
-   - Triggers deployment to a hosting provider (options below)
-   - The deployed clawbot auto-runs the registration flow (5.1)
-   - Backend auto-claims it for the requesting `alienId` (skip the 6-digit code since we initiated the deploy)
-   - Issues attestation immediately
-4. Mini app polls `GET /api/deploy-jobs/{id}` until status = `running`
-5. Shows: "Your clawbot is live! 🟢"
+1. User fills in name + optional description on the deploy form
+2. Frontend calls `POST /api/deploy` with config + JWT
+3. Backend creates a `deploy_job` record (status: `pending`)
+4. Mini app shows 4-step animated stepper (stays on step 1)
 
-**Hosting options (hackathon):**
-- **Railway / Fly.io** via API — spin up a container with the clawbot image
-- **SSH to a pre-configured VPS** — run a Docker container
-- **Stub it** — for the demo, pre-deploy a clawbot and simulate the flow
+**Future:** Wire up Railway/Fly.io API to actually provision clawbot containers.
 
-### 5.4 Ownership Verification (third party → clawbot)
+### 5.4 Ownership Verification (third party -> clawbot)
 
 **Trigger:** Any external service wants to verify a clawbot's ownership.
 
 1. Third party calls `GET {clawbot_endpoint}/identity`
 2. Clawbot returns its attestation (public, non-secret)
-3. Third party:
-   - Checks `signature` against the backend's published public key
-   - Confirms `alienId` and `publicKey` match
-4. Third party sends a **challenge**: random nonce
-5. Clawbot signs the nonce with its private key
+3. Third party verifies `signature` against the backend's public key from `/.well-known/openclaw-keys.json`
+4. Third party sends a **challenge**: `POST {clawbot_endpoint}/challenge` with `{ "nonce": "random..." }`
+5. Clawbot signs the nonce with its private key, returns `{ "nonce", "signature", "publicKey" }`
 6. Third party verifies the signature against the `publicKey` in the attestation
 7. **Verified**: this clawbot belongs to this Alien user
 
 ```
 Third Party              Clawbot
-───────────              ───────
-GET /identity ──────────▶
-◀── { attestation } ────
-                         (third party checks signature)
-POST /challenge ────────▶
+---                      ---
+GET /identity ---------->
+<-- { attestation } -----
+                         (verify attestation signature)
+POST /challenge -------->
   { nonce: "abc123" }
-◀── { signature } ──────
-                         (third party verifies sig against publicKey)
-✓ Verified
+<-- { signature } -------
+                         (verify nonce signature against publicKey)
+Verified.
 ```
 
 ---
 
 ## 6. Database Schema (Supabase)
 
+Schema lives in `supabase/migrations/001_initial.sql`. All tables have RLS enabled. `updated_at` columns are auto-set via triggers.
+
 ### `clawbots`
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | uuid, PK | Internal ID |
-| `clawbot_id` | text, unique | Public identifier (`cbot_xxx`) |
+| `clawbot_id` | text, unique | Public identifier (`cbot_` + nanoid) |
 | `name` | text | Display name |
 | `description` | text, nullable | Optional description |
 | `endpoint` | text, nullable | Clawbot's API endpoint URL |
-| `public_key` | text | ed25519 public key |
+| `public_key` | text | ed25519 public key (`ed25519:base64...`) |
 | `claim_code` | text, nullable | 6-digit code (nulled after claim) |
 | `claim_code_expires_at` | timestamptz, nullable | Code expiration |
 | `alien_id` | text, nullable | Linked Alien user ID (null = unclaimed) |
 | `attestation` | jsonb, nullable | Signed ownership attestation |
 | `status` | text | `registered`, `claimed`, `offline` |
 | `created_at` | timestamptz | Creation timestamp |
-| `updated_at` | timestamptz | Last update |
+| `updated_at` | timestamptz | Last update (auto-trigger) |
 
 ### `deploy_jobs`
 
@@ -236,13 +206,13 @@ POST /challenge ────────▶
 |--------|------|-------------|
 | `id` | uuid, PK | Internal ID |
 | `alien_id` | text | Requesting user's Alien ID |
-| `clawbot_id` | text, nullable | Linked clawbot (once deployed) |
+| `clawbot_id` | text, nullable, FK | Linked clawbot (once deployed) |
 | `config` | jsonb | Deployment configuration |
 | `provider` | text | `railway`, `fly`, `manual` |
 | `status` | text | `pending`, `deploying`, `running`, `failed` |
-| `provider_metadata` | jsonb, nullable | Provider-specific data (URLs, IDs) |
+| `provider_metadata` | jsonb, nullable | Provider-specific data |
 | `created_at` | timestamptz | Creation timestamp |
-| `updated_at` | timestamptz | Last update |
+| `updated_at` | timestamptz | Last update (auto-trigger) |
 
 ### `attestation_keys`
 
@@ -259,156 +229,45 @@ POST /challenge ────────▶
 ## 7. API Routes
 
 ### Authentication
-All routes except `/api/clawbots/register` require a valid Alien JWT in the `Authorization: Bearer <token>` header. JWT is verified via `@alien_org/auth-client`.
+All routes except `/api/clawbots/register` and `/api/health` require a valid Alien JWT in the `Authorization: Bearer <token>` header. JWT is verified via `@alien_org/auth-client`.
 
-The `/api/clawbots/register` route is called by the clawbot itself (no Alien JWT needed).
+In development mode, mock JWT tokens ending in `.dev` are accepted for local testing.
 
 ### Endpoints
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/clawbots/register` | None (clawbot calls this) | Register a new clawbot, get claim code |
-| `POST` | `/api/clawbots/claim` | Alien JWT | Claim a clawbot by code |
+| `POST` | `/api/clawbots/register` | None | Register a new clawbot, get claim code |
+| `POST` | `/api/clawbots/claim` | Alien JWT | Claim a clawbot by 6-digit code |
 | `GET` | `/api/clawbots` | Alien JWT | List user's claimed clawbots |
-| `GET` | `/api/clawbots/:id` | Alien JWT | Get clawbot details |
-| `POST` | `/api/clawbots/:id/refresh-code` | Alien JWT | Generate new claim code (for re-claim) |
-| `POST` | `/api/deploy` | Alien JWT | Trigger one-click deploy |
-| `GET` | `/api/deploy/:id` | Alien JWT | Poll deploy job status |
+| `GET` | `/api/clawbots/[id]` | Alien JWT | Get clawbot details (owner verified) |
+| `POST` | `/api/clawbots/[id]/refresh-code` | Alien JWT | Generate new claim code for owned bot |
+| `POST` | `/api/deploy` | Alien JWT | Create deploy job (stub) |
+| `GET` | `/api/deploy/[id]` | Alien JWT | Poll deploy job status (stub) |
 | `GET` | `/api/health` | None | Health check |
+| `GET` | `/.well-known/openclaw-keys.json` | None | Backend's public signing key in JWK format |
 
 ---
 
 ## 8. Mini App Screens
 
-### Screen 1: Home / Dashboard
+7 screens, all using the terminal design system:
 
-```
-┌─────────────────────────────┐
-│  🤖 OpenClaw Linker         │
-│                             │
-│  Welcome, {alienDisplayName}│
-│                             │
-│  ┌───────────────────────┐  │
-│  │  MY CLAWBOTS          │  │
-│  │                       │  │
-│  │  🟢 research-bot      │  │
-│  │     vps-1.example.com │  │
-│  │     claimed 2h ago    │  │
-│  │                       │  │
-│  │  🟢 code-helper       │  │
-│  │     macmini.local     │  │
-│  │     claimed 1d ago    │  │
-│  └───────────────────────┘  │
-│                             │
-│  ┌───────────────────────┐  │
-│  │  + Claim a Clawbot    │  │
-│  └───────────────────────┘  │
-│  ┌───────────────────────┐  │
-│  │  ⚡ Deploy New Clawbot │  │
-│  └───────────────────────┘  │
-└─────────────────────────────┘
-```
-
-### Screen 2: Claim Flow
-
-```
-┌─────────────────────────────┐
-│  ← Claim Your Clawbot       │
-│                             │
-│  Enter the 6-digit code     │
-│  shown in your terminal     │
-│                             │
-│  ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐  │
-│  │8│ │4│ │7│ │2│ │9│ │3│  │
-│  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘  │
-│                             │
-│  ┌───────────────────────┐  │
-│  │      Claim Bot        │  │
-│  └───────────────────────┘  │
-│                             │
-│  Don't have a clawbot yet?  │
-│  Deploy one now →           │
-└─────────────────────────────┘
-```
-
-### Screen 3: Claim Success
-
-```
-┌─────────────────────────────┐
-│                             │
-│           ✓                 │
-│                             │
-│   research-bot is yours!    │
-│                             │
-│   Ownership attestation     │
-│   sent to your clawbot.     │
-│                             │
-│   It can now prove it       │
-│   belongs to you.           │
-│                             │
-│  ┌───────────────────────┐  │
-│  │   View Dashboard      │  │
-│  └───────────────────────┘  │
-│  ┌───────────────────────┐  │
-│  │   Register On-Chain   │  │
-│  │   (coming soon)       │  │
-│  └───────────────────────┘  │
-└─────────────────────────────┘
-```
-
-### Screen 4: One-Click Deploy
-
-```
-┌─────────────────────────────┐
-│  ← Deploy New Clawbot       │
-│                             │
-│  Name                       │
-│  ┌───────────────────────┐  │
-│  │ my-research-bot       │  │
-│  └───────────────────────┘  │
-│                             │
-│  Description (optional)     │
-│  ┌───────────────────────┐  │
-│  │ Helps with papers     │  │
-│  └───────────────────────┘  │
-│                             │
-│  Template                   │
-│  ┌───────────────────────┐  │
-│  │ Default Agent      ▾  │  │
-│  └───────────────────────┘  │
-│                             │
-│  ┌───────────────────────┐  │
-│  │   ⚡ Deploy            │  │
-│  └───────────────────────┘  │
-│                             │
-│  Deploys to Railway.        │
-│  Auto-claimed to your       │
-│  Alien identity.            │
-└─────────────────────────────┘
-```
-
-### Screen 5: Deploy Progress
-
-```
-┌─────────────────────────────┐
-│                             │
-│   Deploying my-research-bot │
-│                             │
-│   ● Provisioning...        │
-│   ○ Starting agent          │
-│   ○ Registering identity    │
-│   ○ Issuing attestation     │
-│                             │
-│   This takes ~30 seconds    │
-│                             │
-└─────────────────────────────┘
-```
+| # | Route | Description |
+|---|-------|-------------|
+| 1 | `/` | Dashboard — ASCII header, bot list, claim/deploy buttons, empty state with typing animation |
+| 2 | `/claim` | Claim flow — 6-digit input with auto-advance, paste support, startParam pre-fill |
+| 3 | `/claim/success` | Success — animated checkmark, attestation confirmation |
+| 4 | `/deploy` | Deploy form — name/description inputs (stub) |
+| 5 | `/deploy/[id]` | Deploy progress — 4-step animated stepper (stub, stays on step 1) |
+| 6 | `/bot/[id]` | Bot detail — identity info, attestation JSON viewer, verification instructions |
+| 7 | `/bot/[id]/register` | ERC-8004 preview — on-chain registration preview, "Coming Soon" |
 
 ---
 
-## 9. Clawbot SDK (Thin Client)
+## 9. Clawbot Identity SDK (`@openclaw/identity`)
 
-A minimal package (`@openclaw/identity`) that clawbot authors install. Handles keypair generation, registration, attestation storage, and the verification endpoint.
+A minimal package for clawbot operators. Lives in `packages/identity/`.
 
 ### Usage
 
@@ -417,27 +276,34 @@ import { initIdentity } from "@openclaw/identity";
 
 const identity = await initIdentity({
   name: "my-research-bot",
-  endpoint: "https://my-vps:3000",
+  endpoint: "https://my-vps:3001",
   linkerUrl: "https://openclaw-linker.vercel.app",
+  port: 3001,
 });
 
-// identity.clawbotId  — assigned ID
-// identity.claimCode  — show to user
-// identity.publicKey  — ed25519 public key
-// identity.attestation — null until claimed, then populated
-
-// Exposes GET /identity and POST /challenge on the clawbot's server
-identity.mountVerificationRoutes(app); // Express/Hono/whatever
+// identity.clawbotId   — assigned ID (cbot_xxx)
+// identity.claimCode   — 6-digit claim code
+// identity.publicKey   — "ed25519:base64..."
+// identity.keypair     — raw keypair
+// identity.attestation — null until claimed
 ```
 
-### What it does internally
+### Modules
 
-1. **First boot**: generates ed25519 keypair, stores in `~/.openclaw/`
-2. **Registration**: `POST /api/clawbots/register` to the linker backend
-3. **Polls for attestation**: checks if claimed, downloads attestation when available
-4. **Exposes verification endpoints**:
-   - `GET /identity` → returns attestation JSON
-   - `POST /challenge` → signs nonce with private key, returns signature
+| Module | Responsibility |
+|--------|---------------|
+| `keypair.ts` | Generate/load ed25519 keypair from `~/.openclaw/` |
+| `register.ts` | `POST /api/clawbots/register` to linker backend |
+| `attestation.ts` | Save/load attestation at `~/.openclaw/attestation.json` |
+| `server.ts` | Hono routes: `GET /identity`, `POST /challenge`, `POST /attestation` |
+| `index.ts` | `initIdentity()` orchestrator — keypair + register + server + ASCII display |
+
+### CLI
+
+```bash
+# Run directly
+BOT_NAME=my-bot LINKER_URL=http://localhost:3000 npx tsx packages/identity/src/index.ts
+```
 
 ---
 
@@ -445,11 +311,12 @@ identity.mountVerificationRoutes(app); // Express/Hono/whatever
 
 | Concern | Mitigation |
 |---------|------------|
-| Claim code brute-force | 6 digits = 1M combinations. Rate limit to 5 attempts per minute per IP. Codes expire in 15 minutes. |
-| Stolen claim code | Short expiry window. Code is single-use. User must also have valid Alien JWT. |
-| Attestation forgery | Signed with backend's ed25519 key. Public key is published at `/.well-known/openclaw-keys.json`. |
+| Claim code brute-force | 6 digits = 1M combinations. Codes expire in 15 minutes. Single-use. |
+| Stolen claim code | Short expiry window. User must also have valid Alien JWT. |
+| Attestation forgery | Signed with backend's ed25519 key. Public key published at `/.well-known/openclaw-keys.json`. |
 | Clawbot impersonation | Challenge-response with the private key. Only the real clawbot has it. |
 | JWT replay | Alien JWTs have `exp` claim. Backend checks expiration via `@alien_org/auth-client`. |
+| Dev mode tokens | Mock JWTs only accepted when `NODE_ENV=development`. Tokens marked with `.dev` suffix. |
 | Backend compromise | Layer 2/3 mitigates: VC issuance distributes trust; on-chain registration removes backend as single point. |
 
 ---
@@ -458,21 +325,21 @@ identity.mountVerificationRoutes(app); // Express/Hono/whatever
 
 | Component | Technology |
 |-----------|------------|
-| Mini app frontend | Next.js 15 (App Router), React, Tailwind, shadcn/ui |
-| Alien integration | `@alien_org/react`, `@alien_org/auth-client` |
+| Mini app frontend | Next.js 15 (App Router), React 19, Tailwind CSS v4, framer-motion |
+| Alien integration | `@alien_org/react`, `@alien_org/auth-client`, `@alien_org/bridge` |
 | Backend API | Next.js API routes (same app) |
 | Database | Supabase (Postgres) |
-| Crypto (attestation signing) | `@noble/ed25519` or Node.js `crypto` |
-| Clawbot SDK | TypeScript, `@noble/ed25519`, minimal deps |
+| Crypto | `@noble/ed25519` (attestation signing + clawbot keypairs) |
+| Clawbot SDK | TypeScript, `@noble/ed25519`, Hono, `@hono/node-server` |
+| Design system | Custom terminal-style components (7 primitives) |
 | Deployment (mini app) | Vercel |
-| Deployment (clawbots) | Railway API (hackathon), Fly.io (alternative) |
 
 ---
 
 ## 12. Layer 2 — Verifiable Credentials (Stretch)
 
 **Changes from Layer 1:**
-- Clawbot keypair generates a `did:key:z6Mk...` (ed25519 → multicodec → multibase)
+- Clawbot keypair generates a `did:key:z6Mk...` (ed25519 -> multicodec -> multibase)
 - Backend becomes a VC issuer with its own DID
 - Attestation format changes from custom JSON to W3C VC:
   ```json
@@ -496,7 +363,7 @@ identity.mountVerificationRoutes(app); // Express/Hono/whatever
 ## 13. Layer 3 — ERC-8004 On-Chain (Future)
 
 **Changes from Layer 2:**
-- "Register On-Chain" button in the mini app
+- "Register On-Chain" button in the mini app (UI preview already built at `/bot/[id]/register`)
 - Calls ERC-8004 `IdentityRegistry.register()` on Base
 - Agent registration file includes Alien ID in services:
   ```json
@@ -519,273 +386,40 @@ identity.mountVerificationRoutes(app); // Express/Hono/whatever
 
 ---
 
-## 14. Milestones
+## 14. Implementation Status
 
-### M1: Skeleton (1-2 hours)
-- [ ] Next.js app with `@alien_org/react` provider
-- [ ] Supabase project + tables
-- [ ] Basic UI shell (home, claim, deploy screens)
+### Layer 1 (Complete)
+- [x] Monorepo scaffold (npm workspaces, Next.js 15, Tailwind v4)
+- [x] Alien SDK integration (`AlienProvider`, `useAlien`, dev-mode auth)
+- [x] Database schema (3 tables with indexes, RLS, triggers)
+- [x] Attestation crypto (ed25519 signing/verification via `@noble/ed25519`)
+- [x] Key generation script (`scripts/generate-keys.ts`)
+- [x] All 9 API routes implemented
+- [x] Terminal design system (7 UI primitives + 2 layout components)
+- [x] 5 business logic hooks (auth, clawbots, claim, deploy)
+- [x] 7 mini app pages with animations and transitions
+- [x] Clawbot identity SDK (`packages/identity`)
+- [x] Dev-mode auth (mock JWT for local testing)
+
+### Not Yet Done
+- [ ] Supabase project provisioning and table creation
 - [ ] Register mini app in Alien Developer Portal
+- [ ] Wire up real deploy provider (Railway/Fly.io)
+- [ ] Rate limiting on claim endpoint
+- [ ] Test inside actual Alien app via deeplink
 
-### M2: Claim Flow (2-3 hours)
-- [ ] `/api/clawbots/register` endpoint
-- [ ] `/api/clawbots/claim` endpoint with JWT verification
-- [ ] Claim code UI (6-digit input)
-- [ ] Attestation signing (ed25519)
-- [ ] Minimal clawbot SDK (keypair + registration + attestation storage)
-
-### M3: Dashboard + Polish (1-2 hours)
-- [ ] Dashboard showing claimed clawbots
-- [ ] Status indicators (online/offline)
-- [ ] Clawbot detail view with attestation info
-- [ ] Verification endpoint on clawbot (`GET /identity`, `POST /challenge`)
-
-### M4: One-Click Deploy (2-3 hours)
-- [ ] Deploy form UI
-- [ ] Railway API integration (or stub)
-- [ ] Deploy job polling
-- [ ] Auto-claim after deploy
-
-### M5: Stretch Goals
-- [ ] VC format attestation (Layer 2)
-- [ ] ERC-8004 registration (Layer 3)
-- [ ] QR code claim flow (alternative to 6-digit code)
+### Stretch
+- [ ] W3C Verifiable Credential attestation format
+- [ ] ERC-8004 on-chain registration (UI preview exists)
+- [ ] QR code alternative to 6-digit claim code
+- [ ] Real-time bot status via Supabase Realtime
 
 ---
 
-## 15. Open Questions
+## 15. Resolved Questions
 
-1. **Alien wallet support** — Does the Alien bridge expose wallet signing? Need to check full Bridge Reference. If yes, we can potentially do on-chain txs from within the mini app for Layer 3.
-2. **Deploy provider** — Railway vs Fly.io vs stubbed demo. Decision based on API availability and hackathon time.
-3. **Clawbot image** — What Docker image / template does OpenClaw use? Needed for one-click deploy.
-4. **Claim code UX** — 6-digit numeric vs short alphanumeric (e.g., `CLAW-7X9K`). Numeric is easier on mobile.
-5. **Attestation renewal** — Should attestations expire and require renewal? Layer 1: yes (1 year). Layer 2+: handled by VC expiry.
-
----
-
-# Implementation Plan
-
-## Repo Structure
-
-```
-alien_linker/
-├── apps/
-│   └── mini-app/              # Next.js 15 App Router (frontend + API routes)
-│       ├── app/
-│       │   ├── layout.tsx     # AlienProvider wrapper
-│       │   ├── page.tsx       # Dashboard (home)
-│       │   ├── claim/
-│       │   │   └── page.tsx   # Claim flow (6-digit input)
-│       │   ├── deploy/
-│       │   │   └── page.tsx   # One-click deploy
-│       │   ├── bot/[id]/
-│       │   │   └── page.tsx   # Bot detail view
-│       │   └── api/
-│       │       ├── clawbots/
-│       │       │   ├── register/route.ts  # POST - clawbot self-registers
-│       │       │   ├── claim/route.ts     # POST - user claims with code
-│       │       │   └── route.ts           # GET  - list user's bots
-│       │       ├── deploy/
-│       │       │   └── route.ts           # POST + GET - deploy jobs
-│       │       └── health/route.ts
-│       ├── components/
-│       │   ├── alien-shell.tsx       # AlienProvider + layout chrome
-│       │   ├── claim-code-input.tsx  # Premium 6-digit input
-│       │   ├── bot-card.tsx          # Clawbot card for dashboard
-│       │   ├── deploy-progress.tsx   # Animated deploy stepper
-│       │   └── status-badge.tsx      # Online/offline indicator
-│       ├── lib/
-│       │   ├── supabase.ts           # Supabase client
-│       │   ├── auth.ts               # Alien JWT verification
-│       │   ├── attestation.ts        # ed25519 signing/verification
-│       │   └── deploy-provider.ts    # Railway/Fly API wrapper
-│       └── ...
-├── packages/
-│   └── identity/              # @openclaw/identity — clawbot SDK
-│       ├── src/
-│       │   ├── index.ts       # Main exports
-│       │   ├── keypair.ts     # ed25519 keypair generation + storage
-│       │   ├── register.ts    # POST to linker backend
-│       │   ├── attestation.ts # Store/load attestation
-│       │   └── server.ts      # Verification endpoints (GET /identity, POST /challenge)
-│       └── package.json
-├── DOCS/
-│   ├── PRD.md
-│   └── ...
-├── package.json               # Workspace root (turborepo or npm workspaces)
-└── turbo.json
-```
-
----
-
-## Workstream Split (3 people, 2 days)
-
-### Person 1: Mini App UI + Alien Integration
-
-**Day 1:**
-- Scaffold Next.js 15 app with Tailwind + shadcn/ui
-- Install `@alien_org/react`, wrap app in `AlienProvider`
-- Register mini app in Alien Developer Portal (https://dev.alien.org/)
-- Build all 5 screens with placeholder data:
-  - Dashboard (list claimed bots)
-  - Claim flow (6-digit code input)
-  - Claim success (with animation)
-  - Deploy form
-  - Deploy progress (animated stepper)
-- The 6-digit claim code input should feel premium — individual digit boxes with auto-focus advance, like a 2FA input
-- Use `framer-motion` for page transitions and success animations
-
-**Day 2:**
-- Wire up to real API routes (Person 2's work)
-- Handle Alien-specific UX: safe area insets via `useLaunchParams`, back button via `useEvent`
-- Polish: loading states, error states, empty states
-- Test inside actual Alien app via deeplink
-- Add `startParam` support so a clawbot can generate a deeplink that pre-fills the claim code
-
-**UI direction:** Dark theme, glassmorphism cards, accent color (neon green or electric blue to match "alien" vibe). Mobile-first since it runs in a phone WebView. Micro-interactions on every action.
-
-### Person 2: Backend API + Supabase + Auth
-
-**Day 1:**
-- Set up Supabase project, create tables via migrations:
-  - `clawbots` table (id, clawbot_id, name, endpoint, public_key, claim_code, claim_code_expires_at, alien_id, attestation, status, created_at, updated_at)
-  - `deploy_jobs` table (id, alien_id, clawbot_id, config, provider, status, provider_metadata, created_at, updated_at)
-  - `attestation_keys` table (id, public_key, private_key_ref, active, created_at)
-  - RLS policies: clawbots visible only to their owner (by alien_id), deploy_jobs same
-- Implement API routes:
-  - `POST /api/clawbots/register` — no auth, clawbot calls this, generates 6-digit code
-  - `POST /api/clawbots/claim` — Alien JWT auth, matches code, creates link
-  - `GET /api/clawbots` — Alien JWT auth, returns user's bots
-- Implement Alien JWT verification using `@alien_org/auth-client` in a shared middleware (`lib/auth.ts`)
-- Generate backend ed25519 signing keypair, store private key in env var
-
-**Day 2:**
-- Implement attestation signing in `lib/attestation.ts`:
-  - Sign: `{alienId, clawbotId, publicKey, issuedBy, issuedAt, expiresAt}` with backend key
-  - Publish backend public key at `GET /.well-known/openclaw-keys.json`
-- Implement deploy API:
-  - `POST /api/deploy` — creates job, triggers provider
-  - `GET /api/deploy/:id` — poll status
-- Wire up attestation delivery to clawbot (POST to clawbot's endpoint after claim)
-- Rate limiting on claim endpoint (5 attempts/min/IP)
-- Edge cases: expired codes, already-claimed bots, duplicate claims
-
-### Person 3: Clawbot SDK + Agent Template + Deploy
-
-**Day 1:**
-- Build `packages/identity` SDK:
-  - `keypair.ts`: generate ed25519 keypair, save to `~/.openclaw/identity.key` and `.pub`
-  - `register.ts`: call `POST /api/clawbots/register` with publicKey + name + endpoint
-  - `attestation.ts`: receive and store attestation at `~/.openclaw/attestation.json`, poll for it if not immediately available
-  - `server.ts`: express/hono middleware that exposes `GET /identity` and `POST /challenge`
-- Build a minimal clawbot template:
-  - A simple agent process (can be as simple as an HTTP server that responds to prompts)
-  - On startup: calls `initIdentity()` from the SDK
-  - Displays claim code in terminal with a nice ASCII box
-  - Dockerize it (Dockerfile)
-
-**Day 2:**
-- Implement one-click deploy pipeline:
-  - Option A: Railway API (`POST /v1/deployments` with the Docker image)
-  - Option B: Fly.io Machines API
-  - Option C: SSH to a pre-provisioned VPS and `docker run`
-  - For hackathon: pick whichever has the simplest API, or pre-provision a box and use SSH
-- The deployed clawbot should auto-register and auto-claim (backend skips code for deploy-initiated bots)
-- Test the full end-to-end: start bot -> see code -> claim in app -> attestation delivered -> verification works
-- Write a CLI wrapper: `npx @openclaw/identity init` for easy onboarding
-
----
-
-## Supabase Schema (SQL)
-
-```sql
--- clawbots table
-create table clawbots (
-  id uuid primary key default gen_random_uuid(),
-  clawbot_id text unique not null,
-  name text not null,
-  description text,
-  endpoint text,
-  public_key text not null,
-  claim_code text,
-  claim_code_expires_at timestamptz,
-  alien_id text,
-  attestation jsonb,
-  status text not null default 'registered',
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
--- deploy_jobs table
-create table deploy_jobs (
-  id uuid primary key default gen_random_uuid(),
-  alien_id text not null,
-  clawbot_id text references clawbots(clawbot_id),
-  config jsonb not null default '{}',
-  provider text not null default 'manual',
-  status text not null default 'pending',
-  provider_metadata jsonb,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
--- backend signing keys
-create table attestation_keys (
-  id uuid primary key default gen_random_uuid(),
-  public_key text not null,
-  private_key_ref text not null,
-  active boolean not null default true,
-  created_at timestamptz not null default now()
-);
-```
-
----
-
-## Key Integration Points
-
-These are the handshakes between workstreams — agree on these on Day 1 morning:
-
-1. **Person 1 <-> Person 2**: API contract (request/response shapes for each route). Define these in a shared `types.ts` file on Day 1 so both can work independently.
-2. **Person 2 <-> Person 3**: The `/api/clawbots/register` endpoint is the handshake. Person 3's SDK calls Person 2's API. Agree on the request/response format early.
-3. **Person 1 <-> Person 3**: The `startParam` deeplink flow. Person 3's clawbot can generate an Alien deeplink (`https://alien.app/miniapp/{slug}?startParam={claimCode}`) that Person 1's UI reads to auto-fill the claim code.
-
----
-
-## Day 1 End Goal
-
-All three workstreams produce independently testable pieces:
-- Person 1: Beautiful UI that works with mock data
-- Person 2: Working API routes testable via curl/Postman
-- Person 3: A clawbot that starts, generates a keypair, registers, shows a claim code
-
-## Day 2 End Goal
-
-Everything wired together, tested inside the Alien app:
-- Open mini app in Alien -> see dashboard -> claim a bot -> success
-- Deploy a bot from the app -> watch progress -> auto-claimed
-- Clawbot can prove ownership to a third party
-
----
-
-## Dependencies
-
-**Mini app (apps/mini-app):**
-- `@alien_org/react`, `@alien_org/auth-client`
-- `@noble/ed25519` (attestation crypto)
-- `framer-motion` (animations)
-- `shadcn/ui` components: button, input, card, badge, dialog, separator
-- `@supabase/supabase-js`
-
-**Clawbot SDK (packages/identity):**
-- `@noble/ed25519`
-- `hono` (lightweight HTTP server for verification endpoints)
-
----
-
-## Stretch Goals (if time permits)
-
-- Verifiable Credential format for attestations (Layer 2)
-- ERC-8004 on-chain registration button (Layer 3, needs wallet in Alien)
-- QR code as alternative to 6-digit code (clawbot terminal shows QR, scan in Alien)
-- Real-time status updates via Supabase Realtime (bot goes online/offline)
-- Multiple bot management (rename, unlink, transfer)
+1. **Claim code UX** — 6-digit numeric. Premium digit-box input with auto-advance and paste support.
+2. **Attestation renewal** — 1-year expiry on Layer 1 attestations.
+3. **Deploy provider** — Stubbed for MVP. UI and API ready for Railway integration.
+4. **Dev mode** — Alien SDK gracefully degrades in browser. Mock JWT with `.dev` suffix for local API testing.
+5. **Alien wallet support** — Bridge supports `payment:request` but no raw wallet signing. Layer 3 on-chain registration may need to be handled differently.
