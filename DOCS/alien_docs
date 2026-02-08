@@ -1,0 +1,658 @@
+Alien Create a Mini App
+This guide walks you through creating a mini app in the Alien Developer Portal.
+Prerequisites
+* An Alien account
+* A web application ready to be hosted (or a planned URL)
+Step 1: Access the Developer Portal
+1. Navigate to https://dev.alien.org/ 
+2. Sign in with your Alien account
+3. Select Mini Apps from the dashboard
+Step 2: Create a New Mini App
+Click Create Mini App to open the configuration form.
+Required Fields
+Field	Description
+Name	Display name shown to users in the Alien app
+Description	Short summary of what your mini app does
+Logo	Icon displayed in the Alien app (recommended: 512x512px)
+URL	Public URL where your mini app is hosted
+Allowed Origins	Domains authorized to communicate with the Alien Bridge
+Example Configuration
+Name: My Game
+Description: A fun puzzle game built for Alien
+URL: https://mygame.example.com
+Allowed Origins: https://mygame.example.com
+Step 3: Understanding Your Slug
+When you create a mini app, a unique slug is automatically generated from your app’s name. This slug identifies your mini app in the Alien ecosystem.
+Users can launch your app via deeplink: https://alien.app/miniapp/{slug}
+Step 4: Test Your Mini App
+Once created, you can test your mini app:
+1. Browser Testing: Run your app in a regular browser to test UI and logic. The Bridge SDK will log warnings but won’t block development.
+2. In-App Testing: Copy the deeplink from your mini app dashboard in the Developer Portal and open it on your device. This launches your mini app in the Alien app’s WebView environment.
+Next Steps
+* Install Boilerplate — Start with a pre-configured template
+* Testing — Test your mini app locally and in the Alien app
+* React SDK — React hooks and components
+* Authentication — Implement user authentication
+* Payments — Accept payments with webhook verification—Create a Mini App
+* This guide walks you through creating a mini app in the Alien Developer Portal.
+* Prerequisites
+* An Alien account
+* A web application ready to be hosted (or a planned URL)
+* Step 1: Access the Developer Portal
+* Navigate to https://dev.alien.org/ 
+* Sign in with your Alien account
+* Select Mini Apps from the dashboard
+* Step 2: Create a New Mini App
+* Click Create Mini App to open the configuration form.
+* Required Fields
+Field	Description
+Name	Display name shown to users in the Alien app
+Description	Short summary of what your mini app does
+Logo	Icon displayed in the Alien app (recommended: 512x512px)
+URL	Public URL where your mini app is hosted
+Allowed Origins	Domains authorized to communicate with the Alien Bridge
+Example Configuration
+* Name: My Game
+* Description: A fun puzzle game built for Alien
+* URL: https://mygame.example.com
+* Allowed Origins: https://mygame.example.com
+* Step 3: Understanding Your Slug
+* When you create a mini app, a unique slug is automatically generated from your app’s name. This slug identifies your mini app in the Alien ecosystem.
+* Users can launch your app via deeplink: https://alien.app/miniapp/{slug}
+* Step 4: Test Your Mini App
+* Once created, you can test your mini app:
+* Browser Testing: Run your app in a regular browser to test UI and logic. The Bridge SDK will log warnings but won’t block development.
+* In-App Testing: Copy the deeplink from your mini app dashboard in the Developer Portal and open it on your device. This launches your mini app in the Alien app’s WebView environment.
+* Next Steps
+* Install Boilerplate — Start with a pre-configured template
+* Testing — Test your mini app locally and in the Alien app
+* React SDK — React hooks and components
+* Authentication — Implement user authentication
+* Payments — Accept payments with webhook verification——Testing
+* This guide covers how to test your mini app during development, from local browser testing to full integration testing in the Alien app.
+* Local Development
+* During development, you can run your mini app in a regular browser. The SDK operates in development mode when the bridge is unavailable (i.e., window.__ALIEN_AUTH_TOKEN__ and other host-injected globals are not present).
+* bun dev
+* # or: npm run dev
+* What works in the browser:
+* UI rendering and styling
+* Application logic and state management
+* API calls to your backend
+* Navigation and routing
+* What doesn’t work:
+* Bridge communication with the host app
+* Native features (payments, clipboard, link opening)
+* The SDK logs warnings instead of throwing errors, so your app won’t crash. Bridge functions return graceful fallbacks.
+* import { isBridgeAvailable } from '@alien_org/bridge';
+*  
+* // Check if running in Alien app
+* if (isBridgeAvailable()) {
+*   // Bridge methods will work
+* } else {
+*   // Dev mode - bridge methods log warnings and return gracefully
+* }
+* Testing in the Alien App
+* To test the full integration with native features, launch your mini app inside the Alien app.
+* Steps
+* Deploy your app to a publicly accessible URL
+* Go to your mini app dashboard in the Developer Portal 
+* Copy the deeplink for your mini app
+* Open the deeplink on your device — your mini app launches in the Alien app
+* Launch Parameters
+* When the Alien app loads your mini app, it provides launch parameters. Use the useLaunchParams hook to access them:
+* import { useLaunchParams } from '@alien_org/react';
+*  
+* function App() {
+*   const launchParams = useLaunchParams();
+*  
+*   if (!launchParams) {
+*     return <div>Running outside Alien App</div>;
+*   }
+*  
+*   return <div>Platform: {launchParams.platform}</div>;
+* }
+* Available parameters:
+Parameter	Type	Description
+authToken	string | undefined	JWT for backend authentication
+contractVersion	Version | undefined	SDK protocol version
+hostAppVersion	string | undefined	Host app version
+platform	'ios' | 'android' | undefined	Platform identifier
+startParam	string | undefined	Custom parameter from deeplink
+safeAreaInsets	SafeAreaInsets | undefined	Safe area insets for the WebView
+Deeplink Testing
+* Share deeplinks to launch your mini app directly:
+* https://alien.app/miniapp/{slug}
+* With a custom start parameter:
+* https://alien.app/miniapp/{slug}?startParam={value}
+* The startParam value is available via useLaunchParams(). Use this for:
+* Referral tracking
+* Deep navigation to specific content
+* Campaign attribution
+* Pre-filling form data
+* Example:
+* https://alien.app/miniapp/my-game?startParam=level-5
+* import { useEffect } from 'react';
+* import { useLaunchParams } from '@alien_org/react';
+*  
+* function Game() {
+*   const launchParams = useLaunchParams();
+*  
+*   useEffect(() => {
+*     if (launchParams?.startParam === 'level-5') {
+*       navigateToLevel(5);
+*     }
+*   }, [launchParams?.startParam]);
+*  
+*   // ...
+* }
+* Debugging Tips
+* Check Bridge Availability
+* import { useAlien } from '@alien_org/react';
+*  
+* function DebugInfo() {
+*   const { isBridgeAvailable } = useAlien();
+*  
+*   if (isBridgeAvailable) {
+*     console.log('Running in Alien app');
+*   } else {
+*     console.log('Running in browser (dev mode)');
+*   }
+*  
+*   // ...
+* }
+* Log Launch Parameters
+* import { useLaunchParams } from '@alien_org/react';
+*  
+* function DebugInfo() {
+*   const launchParams = useLaunchParams();
+*  
+*   console.log('Launch params:', {
+*     authToken: launchParams?.authToken ? 'present' : 'missing',
+*     contractVersion: launchParams?.contractVersion,
+*     hostVersion: launchParams?.hostAppVersion,
+*     platform: launchParams?.platform,
+*     startParam: launchParams?.startParam,
+*   });
+*  
+*   // ...
+* }
+* Remote Debugging
+* iOS: Use Safari Web Inspector to debug the WebView.
+* Enable “Web Inspector” in Safari settings on your device
+* Connect your device to your Mac
+* Open Safari > Develop > [Your Device] > [Your App]
+* Android: Use Chrome DevTools.
+* Enable USB debugging on your device
+* Connect your device to your computer
+* Open chrome://inspect in Chrome
+* Select your WebView under “Remote Target”
+* Common Issues
+Issue	Solution	
+Bridge methods return undefined	Verify you’re running inside the Alien app	
+Auth token missing	Check that your app is properly registered	
+Start param not received	Verify the deeplink format is correct	
+Next Steps
+* Authentication — Implement user authentication
+* Payments — Accept payments with webhook verification
+* React SDK — Full hooks reference
+* _——React SDK
+* The @alien_org/react package provides React hooks for building mini apps. It wraps the low-level bridge API with React-friendly state management.
+* Installation
+* npm install @alien_org/react
+* Setup
+* Wrap your app with AlienProvider:
+* import { AlienProvider } from '@alien_org/react';
+*  
+* function App() {
+*   return (
+*     <AlienProvider>
+*       <YourApp />
+*     </AlienProvider>
+*   );
+* }
+* The provider initializes the bridge connection, reads launch parameters, sets safe area CSS variables, and sends app:ready to the host app. See App Lifecycle for details on why app:ready matters.
+* AlienProvider Props
+Prop	Type	Default	Description
+autoReady	boolean	true	Automatically send app:ready on mount. Set to false to defer the ready signal.
+interceptLinks	boolean	true	Intercept external link clicks and route them through the bridge.
+Hooks Reference
+* useAlien
+* Access the core context values.
+* import { useAlien } from '@alien_org/react';
+*  
+* const { authToken, contractVersion, isBridgeAvailable, ready } = useAlien();
+Property	Type	Description	
+authToken	string | undefined	JWT from host app	
+contractVersion	Version | undefined	SDK protocol version	
+isBridgeAvailable	boolean	true if running in Alien app	
+ready	() => void	Signal the host that the miniapp is ready (only needed with autoReady={false})	
+useLaunchParams
+* Get all launch parameters.
+* import { useLaunchParams } from '@alien_org/react';
+*  
+* const params = useLaunchParams();
+* Returns undefined if launch params are unavailable (e.g., running in a browser).
+Property	Type	Description	
+authToken	string | undefined	JWT from host app	
+contractVersion	Version | undefined	SDK protocol version	
+hostAppVersion	string | undefined	Host app version	
+platform	'ios' | 'android' | undefined	Platform	
+startParam	string | undefined	Custom deeplink parameter	
+safeAreaInsets	SafeAreaInsets | undefined	Safe area insets ({ top, right, bottom, left })	
+useEvent
+* Subscribe to events from the host app. Cleanup is automatic on unmount.
+* import { useEvent } from '@alien_org/react';
+*  
+* // Handle back button
+* useEvent('host.back.button:clicked', () => {
+*   navigateBack();
+* });
+* useMethod
+* Generic hook for request-response bridge methods. Handles loading, error states, and version checking automatically.
+* import { useMethod } from '@alien_org/react';
+*  
+* const { execute, data, error, isLoading, reset, supported } = useMethod(
+*   'payment:request',
+*   'payment:response',
+* );
+*  
+* const result = await execute({
+*   recipient: 'wallet-address',
+*   amount: '1000000',
+*   token: 'USDC',
+*   network: 'solana',
+*   invoice: 'order-123',
+* });
+Property	Type	Description	
+execute	(params, options?) => Promise<{ data, error }>	Send the method	
+data	EventPayload | undefined	Response data	
+error	Error | undefined	Error if failed	
+isLoading	boolean	Request in progress	
+reset	() => void	Reset state	
+supported	boolean	Method supported by host	
+usePayment
+* Specialized hook for payments with full state management. See Payments for full documentation.
+* import { usePayment } from '@alien_org/react';
+*  
+* const { pay, isPaid, isLoading, txHash, errorCode } = usePayment({
+*   onPaid: (txHash) => console.log('Paid!', txHash),
+*   onCancelled: () => console.log('Cancelled'),
+*   onFailed: (code) => console.log('Failed:', code),
+* });
+*  
+* await pay({
+*   recipient: 'wallet-address',
+*   amount: '10000',
+*   token: 'USDC',
+*   network: 'solana',
+*   invoice: 'order-123',
+* });
+* useClipboard
+* Read and write to the system clipboard via the host app. See Clipboard for full documentation.
+* import { useClipboard } from '@alien_org/react';
+*  
+* const { writeText, readText, isReading, errorCode, supported } = useClipboard();
+* useIsMethodSupported
+* Check if a method is supported by the host app version.
+* import { useIsMethodSupported } from '@alien_org/react';
+*  
+* const { supported, minVersion, contractVersion } = useIsMethodSupported('payment:request');
+*  
+* if (!supported) {
+*   return <div>Update the Alien app to use payments (requires {minVersion})</div>;
+* }
+* useLinkInterceptor
+* Intercept external link clicks and route them through the host app. AlienProvider enables this by default. See Link Management for full documentation.
+* import { useLinkInterceptor } from '@alien_org/react';
+*  
+* useLinkInterceptor({ openMode: 'external' });
+* Next Steps
+* App Lifecycle — app:ready and back button
+* Safe Area Insets — Handle notches, status bars, and home indicators
+* Authentication — User authentication
+* Payments — Accept payments
+* Clipboard — System clipboard access
+* Link Management — Open URLs through the host app
+* Bridge Reference — Low-level bridge API
+* Create Mini App — Register your mini app
+* Testing — Test your mini appAuthentication
+* Authenticate users in your Alien mini app. The host app provides a JWT token that identifies the user, which you can verify on your backend.
+* How It Works
+* Your Backend
+* Your Mini App
+* Alien App (Host)
+* Your Backend
+* Your Mini App
+* Alien App (Host)
+* #«r5»{margin:1.5rem auto 0;}#«r5»{font-family:inherit;font-size:16px;fill:#ccc;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#«r5» .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#«r5» .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#«r5» .error-icon{fill:#a44141;}#«r5» .error-text{fill:#ddd;stroke:#ddd;}#«r5» .edge-thickness-normal{stroke-width:1px;}#«r5» .edge-thickness-thick{stroke-width:3.5px;}#«r5» .edge-pattern-solid{stroke-dasharray:0;}#«r5» .edge-thickness-invisible{stroke-width:0;fill:none;}#«r5» .edge-pattern-dashed{stroke-dasharray:3;}#«r5» .edge-pattern-dotted{stroke-dasharray:2;}#«r5» .marker{fill:lightgrey;stroke:lightgrey;}#«r5» .marker.cross{stroke:lightgrey;}#«r5» svg{font-family:inherit;font-size:16px;}#«r5» p{margin:0;}#«r5» .actor{stroke:#ccc;fill:#1f2020;}#«r5» text.actor>tspan{fill:lightgrey;stroke:none;}#«r5» .actor-line{stroke:#ccc;}#«r5» .innerArc{stroke-width:1.5;stroke-dasharray:none;}#«r5» .messageLine0{stroke-width:1.5;stroke-dasharray:none;stroke:lightgrey;}#«r5» .messageLine1{stroke-width:1.5;stroke-dasharray:2,2;stroke:lightgrey;}#«r5» #arrowhead path{fill:lightgrey;stroke:lightgrey;}#«r5» .sequenceNumber{fill:black;}#«r5» #sequencenumber{fill:lightgrey;}#«r5» #crosshead path{fill:lightgrey;stroke:lightgrey;}#«r5» .messageText{fill:lightgrey;stroke:none;}#«r5» .labelBox{stroke:#ccc;fill:#1f2020;}#«r5» .labelText,#«r5» .labelText>tspan{fill:lightgrey;stroke:none;}#«r5» .loopText,#«r5» .loopText>tspan{fill:lightgrey;stroke:none;}#«r5» .loopLine{stroke-width:2px;stroke-dasharray:2,2;stroke:#ccc;fill:#ccc;}#«r5» .note{stroke:hsl(180, 0%, 18.3529411765%);fill:hsl(180, 1.5873015873%, 28.3529411765%);}#«r5» .noteText,#«r5» .noteText>tspan{fill:rgb(183.8476190475, 181.5523809523, 181.5523809523);stroke:none;}#«r5» .activation0{fill:hsl(180, 1.5873015873%, 28.3529411765%);stroke:#ccc;}#«r5» .activation1{fill:hsl(180, 1.5873015873%, 28.3529411765%);stroke:#ccc;}#«r5» .activation2{fill:hsl(180, 1.5873015873%, 28.3529411765%);stroke:#ccc;}#«r5» .actorPopupMenu{position:absolute;}#«r5» .actorPopupMenuPanel{position:absolute;fill:#1f2020;box-shadow:0px 8px 16px 0px rgba(0,0,0,0.2);filter:drop-shadow(3px 5px 2px rgb(0 0 0 / 0.4));}#«r5» .actor-man line{stroke:#ccc;fill:#1f2020;}#«r5» .actor-man circle,#«r5» line{stroke:#ccc;fill:#1f2020;stroke-width:2px;}#«r5» :root{--mermaid-font-family:inherit;}
+* 2. useAlien() reads token
+* 4. Verify JWT with JWKS
+* 1. Injects JWT via window globals
+* 3. Authorization: Bearer <token>
+* 5. Authenticated response
+* User opens your mini app inside the Alien app
+* Host app injects a JWT token via window.__ALIEN_AUTH_TOKEN__
+* AlienProvider reads the token and exposes it via useAlien()
+* Your mini app sends the token to your backend in the Authorization header
+* Backend verifies the token using @alien_org/auth-client (fetches public keys from JWKS)
+* Backend extracts the user’s unique Alien ID from the sub claim
+* Registration is implicit — on first API call, the user is automatically created in the database via a find-or-create pattern. No signup flow needed.
+* Frontend Setup
+* Install the SDK
+* npm install @alien_org/react
+* Configure the Provider
+* Wrap your app with AlienProvider to enable authentication:
+* import { AlienProvider } from '@alien_org/react';
+*  
+* function App() {
+*   return (
+*     <AlienProvider>
+*       <YourApp />
+*     </AlienProvider>
+*   );
+* }
+* Get the Auth Token
+* Use the useAlien hook to access the authentication token:
+* import { useAlien } from '@alien_org/react';
+*  
+* function Profile() {
+*   const { authToken, isBridgeAvailable } = useAlien();
+*  
+*   if (!isBridgeAvailable) {
+*     return <p>Open this app inside Alien to authenticate.</p>;
+*   }
+*  
+*   if (!authToken) {
+*     return <p>Loading...</p>;
+*   }
+*  
+*   return <p>Authenticated</p>;
+* }
+* Available context values:
+Property	Type	Description
+authToken	string | undefined	JWT token from the host app
+isBridgeAvailable	boolean	true if running inside the Alien app
+contractVersion	Version | undefined	SDK protocol version supported by the host
+ready	() => void	Signal the host app that the miniapp is ready (only needed when autoReady is false)
+Using Launch Parameters
+* For additional context about the launch environment, use useLaunchParams:
+* import { useLaunchParams } from '@alien_org/react';
+*  
+* function App() {
+*   const launchParams = useLaunchParams();
+*  
+*   if (!launchParams) {
+*     return <div>Running outside Alien App</div>;
+*   }
+*  
+*   return <div>Platform: {launchParams.platform}</div>;
+* }
+Parameter	Type	Description
+authToken	string | undefined	JWT token
+contractVersion	Version | undefined	SDK protocol version
+platform	'ios' | 'android' | undefined	Platform identifier
+startParam	string | undefined	Custom parameter from deeplink
+hostAppVersion	string | undefined	Version of the Alien app
+safeAreaInsets	SafeAreaInsets | undefined	Safe area insets for the WebView
+Backend Setup
+* Install the Auth Client
+* npm install @alien_org/auth-client
+* Verify Tokens
+* Create an auth client and verify incoming tokens:
+* import { createAuthClient } from '@alien_org/auth-client';
+*  
+* const authClient = createAuthClient();
+*  
+* async function verifyRequest(req: Request) {
+*   const token = req.headers.get('Authorization')?.replace('Bearer ', '');
+*  
+*   if (!token) {
+*     throw new Error('Missing authorization token');
+*   }
+*  
+*   const tokenInfo = await authClient.verifyToken(token);
+*  
+*   // tokenInfo.sub contains the user's unique Alien ID
+*   return tokenInfo;
+* }
+* The auth client automatically fetches the public keys from the JWKS endpoint:
+* https://sso.alien-api.com/oauth/jwks
+* Token Fields
+* Verified tokens contain these standard JWT claims:
+Field	Type	Description
+iss	string	Token issuer
+sub	string	User’s unique Alien ID
+aud	string | string[]	Token audience
+exp	number	Expiration timestamp (Unix)
+iat	number	Issued at timestamp (Unix)
+nonce	string | undefined	Nonce (if provided during auth)
+auth_time	number | undefined	Time of authentication (Unix)
+Complete Example
+* Frontend Component
+* import { AlienProvider, useAlien } from '@alien_org/react';
+* import { useState, useEffect } from 'react';
+*  
+* function UserProfile() {
+*   const { authToken, isBridgeAvailable } = useAlien();
+*   const [user, setUser] = useState<{ alienId: string } | null>(null);
+*   const [error, setError] = useState<string | null>(null);
+*  
+*   useEffect(() => {
+*     if (!authToken) return;
+*  
+*     fetch('/api/me', {
+*       headers: {
+*         Authorization: `Bearer ${authToken}`,
+*       },
+*     })
+*       .then((res) => {
+*         if (!res.ok) throw new Error('Authentication failed');
+*         return res.json();
+*       })
+*       .then(setUser)
+*       .catch((err) => setError(err.message));
+*   }, [authToken]);
+*  
+*   if (!isBridgeAvailable) {
+*     return <p>Please open this app inside Alien.</p>;
+*   }
+*  
+*   if (error) {
+*     return <p>Error: {error}</p>;
+*   }
+*  
+*   if (!user) {
+*     return <p>Loading...</p>;
+*   }
+*  
+*   return <p>Alien ID: {user.alienId}</p>;
+* }
+*  
+* export default function App() {
+*   return (
+*     <AlienProvider>
+*       <UserProfile />
+*     </AlienProvider>
+*   );
+* }
+* Backend API Route (Next.js)
+* import { createAuthClient, JwtErrors } from '@alien_org/auth-client';
+* import { NextResponse } from 'next/server';
+*  
+* const authClient = createAuthClient();
+*  
+* export async function GET(request: Request) {
+*   const token = request.headers
+*     .get('Authorization')
+*     ?.replace('Bearer ', '');
+*  
+*   if (!token) {
+*     return NextResponse.json(
+*       { error: 'Missing authorization token' },
+*       { status: 401 },
+*     );
+*   }
+*  
+*   try {
+*     const { sub } = await authClient.verifyToken(token);
+*  
+*     // sub is the user's unique Alien ID
+*     // Use find-or-create to register users implicitly
+*     const user = await findOrCreateUser(sub);
+*  
+*     return NextResponse.json({
+*       id: user.id,
+*       alienId: user.alienId,
+*       createdAt: user.createdAt.toISOString(),
+*       updatedAt: user.updatedAt.toISOString(),
+*     });
+*   } catch (error) {
+*     if (error instanceof JwtErrors.JWTExpired) {
+*       return NextResponse.json(
+*         { error: 'Token expired' },
+*         { status: 401 },
+*       );
+*     }
+*     if (error instanceof JwtErrors.JOSEError) {
+*       return NextResponse.json(
+*         { error: 'Invalid token' },
+*         { status: 401 },
+*       );
+*     }
+*     return NextResponse.json(
+*       { error: 'Internal server error' },
+*       { status: 500 },
+*     );
+*   }
+* }
+* Express.js Middleware
+* import { createAuthClient, JwtErrors } from '@alien_org/auth-client';
+* import { Request, Response, NextFunction } from 'express';
+*  
+* const authClient = createAuthClient();
+*  
+* interface AuthenticatedRequest extends Request {
+*   user?: {
+*     alienId: string;
+*     exp: number;
+*     iat: number;
+*   };
+* }
+*  
+* export async function authMiddleware(
+*   req: AuthenticatedRequest,
+*   res: Response,
+*   next: NextFunction,
+* ) {
+*   const token = req.headers.authorization?.replace('Bearer ', '');
+*  
+*   if (!token) {
+*     return res.status(401).json({ error: 'Missing authorization token' });
+*   }
+*  
+*   try {
+*     const tokenInfo = await authClient.verifyToken(token);
+*  
+*     req.user = {
+*       alienId: tokenInfo.sub,
+*       exp: tokenInfo.exp,
+*       iat: tokenInfo.iat,
+*     };
+*  
+*     next();
+*   } catch (error) {
+*     if (error instanceof JwtErrors.JWTExpired) {
+*       return res.status(401).json({ error: 'Token expired' });
+*     }
+*     return res.status(401).json({ error: 'Invalid token' });
+*   }
+* }
+*  
+* // Usage
+* app.get('/api/profile', authMiddleware, (req: AuthenticatedRequest, res) => {
+*   res.json({ alienId: req.user?.alienId });
+* });
+* Security Considerations
+* Always verify tokens on your backend. Never trust the frontend alone.
+* Check token expiration. The exp claim indicates when the token expires. The auth client handles this automatically.
+* Use HTTPS. Always transmit tokens over secure connections.
+* Do not log tokens. Avoid logging full tokens in production.
+* Handle JWT errors. Use JwtErrors.JWTExpired and JwtErrors.JOSEError for specific error handling.
+* Next Steps
+* Payments — Accept payments in your mini app
+* Install Boilerplate — Start with a pre-configured templateApp Lifecycle
+* Mini apps run inside the Alien app’s WebView. The host app needs to coordinate with your mini app to know when it’s ready to be shown. The app:ready signal is at the center of this.
+* Why app:ready Matters
+* When a user opens your mini app, the host app shows a loading screen while your app boots up. The host app will not display your mini app until it receives the app:ready signal. This ensures users never see a blank screen, a half-rendered UI, or a flash of unstyled content.
+* User taps miniapp → Host shows loading screen → Your app loads →
+* *   → app:ready sent → Host reveals your app
+* If you never send app:ready, the loading screen stays up indefinitely and the user’s only option is to close your app.
+* Sending app:ready
+* Automatic (Default)
+* AlienProvider sends app:ready automatically after mounting and reading launch parameters. This is the default behavior — no extra code needed.
+* import { AlienProvider } from '@alien_org/react';
+*  
+* function App() {
+*   return (
+*     <AlienProvider>
+*       {/* app:ready fires automatically after mount */}
+*       <YourApp />
+*     </AlienProvider>
+*   );
+* }
+* Deferred
+* If your app needs to load initial data before it’s ready (API calls, asset preloading, etc.), set autoReady={false} and call ready() manually when you’re done.
+* import { AlienProvider, useAlien } from '@alien_org/react';
+*  
+* function App() {
+*   return (
+*     <AlienProvider autoReady={false}>
+*       <YourApp />
+*     </AlienProvider>
+*   );
+* }
+*  
+* function YourApp() {
+*   const { ready } = useAlien();
+*   const [data, setData] = useState(null);
+*  
+*   useEffect(() => {
+*     fetchInitialData().then((result) => {
+*       setData(result);
+*       ready(); // Now the host app reveals your mini app
+*     });
+*   }, []);
+*  
+*   if (!data) return <LoadingSpinner />;
+*   return <MainContent data={data} />;
+* }
+* The ready() function is idempotent — safe to call multiple times. Only the first call sends the signal; subsequent calls are no-ops.
+* Bridge API
+* For non-React apps, send app:ready directly via the bridge:
+* import { send } from '@alien_org/bridge';
+*  
+* // After your app is ready to be displayed
+* send('app:ready', {});
+* This is fire-and-forget — no response event. Available since contract version 0.0.1.
+* Back Button
+* The host app provides a native back button. You can show/hide it and respond to clicks.
+* import { useEvent } from '@alien_org/react';
+* import { send } from '@alien_org/bridge';
+*  
+* // Show the back button
+* send('host.back.button:toggle', { visible: true });
+*  
+* // Handle clicks
+* useEvent('host.back.button:clicked', () => {
+*   navigateBack();
+* });
+* Lifecycle Summary
+Signal	Direction	Description	Since
+app:ready	App → Host	Mini app is ready to be displayed	0.0.1
+host.back.button:toggle	App → Host	Show or hide the native back button	0.0.14
+host.back.button:clicked	Host → App	User tapped the back button	0.0.14
+Next Steps
+* Clipboard — System clipboard access
+* Link Management — Open URLs through the host app
+* Payments — Accept payments
+* Bridge Reference — Full bridge API reference
