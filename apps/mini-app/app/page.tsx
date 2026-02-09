@@ -12,6 +12,9 @@ import { PageTransition } from "@/components/layout/page-transition";
 import { CopyBlock } from "@/components/ui/copy-block";
 import { useClawbots } from "@/hooks/use-clawbots";
 
+const QUICK_PROMPT = (linkerUrl: string) =>
+  `Install @alienclaw/identity (bun add @alienclaw/identity) and set up identity linking. Add initIdentity({ name: "my-agent", linkerUrl: "${linkerUrl}" }) to your startup. Run it and show me the 6-digit claim code.`;
+
 const ASCII_ROBOT = `
     ╭─────╮
     │ ◉ ◉ │
@@ -24,6 +27,7 @@ const ASCII_ROBOT = `
 
 export default function Dashboard() {
   const { clawbots, loading, error } = useClawbots();
+  const linkerUrl = typeof window !== "undefined" ? window.location.origin : "https://your-linker.vercel.app";
 
   return (
     <PageTransition className="space-y-6">
@@ -92,13 +96,12 @@ export default function Dashboard() {
         <TerminalCard glow="cyan">
           <div className="space-y-3 text-xs">
             <p className="text-terminal-text">
-              To link an agent, install the identity SDK on it:
+              Paste this prompt into your agent&apos;s chat to get started:
             </p>
-            <CopyBlock text="bun add @alienclaw/identity" />
+            <CopyBlock text={QUICK_PROMPT(linkerUrl)} />
             <p className="text-terminal-dim">
-              Then call{" "}
-              <span className="text-terminal-cyan">initIdentity()</span>{" "}
-              in your agent. A 6-digit code will appear in the terminal.
+              Or use the Claude Code skill:{" "}
+              <span className="text-terminal-cyan">/alienclaw-setup</span>
             </p>
           </div>
         </TerminalCard>

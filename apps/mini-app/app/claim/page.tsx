@@ -12,6 +12,20 @@ import { PageTransition } from "@/components/layout/page-transition";
 import { useClaimBot } from "@/hooks/use-claim-bot";
 import Link from "next/link";
 
+const AGENT_PROMPT = (linkerUrl: string) =>
+  `Set up AlienClaw identity linking on this machine so I can link you to my Alien account.
+
+1. Install the SDK: bun add @alienclaw/identity
+2. Add this to your startup/entry point:
+
+import { initIdentity } from "@alienclaw/identity"
+await initIdentity({
+  name: "my-agent",
+  linkerUrl: "${linkerUrl}",
+})
+
+3. Run it and show me the 6-digit claim code from the output.`;
+
 function ClaimContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -19,6 +33,7 @@ function ClaimContent() {
   const { state, error, claim, reset } = useClaimBot();
   const [code, setCode] = useState("");
   const [showSetup, setShowSetup] = useState(false);
+  const linkerUrl = typeof window !== "undefined" ? window.location.origin : "https://your-linker.vercel.app";
 
   const prefill =
     launchParams?.startParam || searchParams.get("code") || "";
@@ -105,36 +120,47 @@ function ClaimContent() {
 
         {showSetup && (
           <TerminalCard glow="cyan">
-            <div className="space-y-4 text-xs">
-              <p className="text-terminal-text">
-                Run the identity SDK on your agent&apos;s machine.
-                It generates a keypair, registers with the linker,
-                and prints a 6-digit code.
-              </p>
-
+            <div className="space-y-5 text-xs">
+              {/* Option 1: Prompt */}
               <div className="space-y-1.5">
                 <p className="text-terminal-dim uppercase tracking-wider">
-                  1. Install the SDK
+                  Option 1 — Give your agent this prompt
                 </p>
-                <CopyBlock text="bun add @alienclaw/identity" />
+                <p className="text-terminal-text">
+                  Copy and paste this into your agent&apos;s chat:
+                </p>
+                <CopyBlock text={AGENT_PROMPT(linkerUrl)} />
               </div>
 
+              {/* Option 2: Claude Skill */}
               <div className="space-y-1.5">
                 <p className="text-terminal-dim uppercase tracking-wider">
-                  2. Add to your agent
+                  Option 2 — Claude Code skill
                 </p>
+                <p className="text-terminal-text">
+                  If your agent runs on Claude Code, just run:
+                </p>
+                <CopyBlock text="/alienclaw-setup" />
+              </div>
+
+              {/* Option 3: Manual */}
+              <div className="space-y-1.5">
+                <p className="text-terminal-dim uppercase tracking-wider">
+                  Option 3 — Manual install
+                </p>
+                <CopyBlock text="bun add @alienclaw/identity" />
                 <CopyBlock
                   text={`import { initIdentity } from "@alienclaw/identity"
 
 await initIdentity({
   name: "my-agent",
-  linkerUrl: "https://your-linker.vercel.app",
+  linkerUrl: "${linkerUrl}",
 })`}
                 />
               </div>
 
               <p className="text-terminal-dim">
-                The 6-digit code appears in the terminal output.
+                The 6-digit code appears in the agent&apos;s terminal.
                 Enter it above to link the agent to your Alien identity.
               </p>
             </div>
