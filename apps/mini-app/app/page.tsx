@@ -97,7 +97,7 @@ export default function Dashboard() {
               {ASCII_ROBOT}
             </pre>
             <div className="mt-2 text-center text-sm text-terminal-text">
-              <TypingText text="No agents linked yet. Use /alienclaw-setup or paste the prompt below into your agent." />
+              <TypingText text="No agents linked yet. Install the plugin or paste the prompt below into your agent." />
             </div>
           </TerminalCard>
         )}
@@ -109,9 +109,12 @@ export default function Dashboard() {
           <div className="space-y-4 text-xs">
             <div className="space-y-1.5">
               <p className="text-terminal-dim uppercase tracking-wider">
-                Claude Code
+                Claude Code plugin
               </p>
-              <CopyBlock text="/alienclaw-setup" />
+              <CopyBlock text={`/plugin marketplace add nembal/alien_linker\n/plugin install alienclaw@nembal-alien-linker`} />
+              <p className="text-terminal-text">
+                Then run: <span className="text-terminal-cyan">/alienclaw:setup</span>
+              </p>
             </div>
             <div className="space-y-1.5">
               <p className="text-terminal-dim uppercase tracking-wider">

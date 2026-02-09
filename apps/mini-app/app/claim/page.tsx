@@ -125,12 +125,16 @@ function ClaimContent() {
               {/* Option 1: Claude Skill */}
               <div className="space-y-1.5">
                 <p className="text-terminal-dim uppercase tracking-wider">
-                  Option 1 — Claude Code skill
+                  Option 1 — Claude Code plugin
                 </p>
                 <p className="text-terminal-text">
-                  If your agent runs on Claude Code:
+                  Install once, then run on any agent:
                 </p>
-                <CopyBlock text={`/alienclaw-setup ${linkerUrl}`} />
+                <CopyBlock text={`/plugin marketplace add nembal/alien_linker\n/plugin install alienclaw@nembal-alien-linker`} />
+                <p className="text-terminal-text mt-1.5">
+                  Then run:
+                </p>
+                <CopyBlock text={`/alienclaw:setup ${linkerUrl}`} />
               </div>
 
               {/* Option 2: Prompt */}

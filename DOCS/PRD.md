@@ -271,9 +271,14 @@ A minimal package for clawbot operators. Lives in `packages/identity/`. Installe
 
 ### Installation
 
-**Claude Code skill (recommended):**
+**Claude Code plugin (recommended):**
 ```
-/alienclaw-setup https://your-linker.vercel.app
+/plugin marketplace add nembal/alien_linker
+/plugin install alienclaw@nembal-alien-linker
+```
+Then on any agent project:
+```
+/alienclaw:setup https://your-linker.vercel.app
 ```
 
 **Manual from GitHub:**

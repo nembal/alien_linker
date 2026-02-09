@@ -1,127 +1,27 @@
 # AlienClaw Linker
 
-Pair your AlienClaw agents (clawbots) to your Alien identity with cryptographic proof of ownership.
+Pair your AI agents to your Alien identity with cryptographic proof of ownership.
 
-An Alien mini app that lets users claim, manage, and deploy clawbots using ed25519 keypairs and signed attestations.
+A mini app inside the Alien ecosystem that lets users claim, manage, and deploy their agents — with ed25519 keypairs and signed attestations.
 
-## Quick Start
+## Link Your Agent
 
-```bash
-# Install dependencies
-npm install
+### Claude Code plugin (recommended)
 
-# Generate attestation signing keys
-npm run generate-keys
-# Copy the output into .env.local
-
-# Create .env.local from the example
-cp .env.example apps/mini-app/.env.local
-# Fill in your Supabase credentials + generated keys
-
-# Run the dev server
-npm run dev
-# App runs at http://localhost:3000
-```
-
-> **bolt.dev / StackBlitz users**: This project works out of the box — just open it and run `npm install && npm run dev`. A `.stackblitzrc` is included.
-
-## Testing Guide
-
-### What Works Right Now
-
-**UI (no Supabase needed):**
-- `npm run dev` starts the app at localhost:3000
-- Dashboard page renders with terminal UI, ASCII header, empty state
-- `/claim` page renders with the 6-digit code input (try typing, pasting, arrow keys)
-- `/claim/success` page renders with animated checkmark
-- `/deploy` page renders with the deploy form
-- All pages have framer-motion transitions, glow effects, scanlines
-
-**API routes (no Supabase needed):**
-```bash
-# Health check — always works
-curl http://localhost:3000/api/health
-# {"status":"ok","timestamp":"..."}
-
-# Public signing key — works if ATTESTATION_PUBLIC_KEY is set in .env.local
-curl http://localhost:3000/.well-known/alienclaw-keys.json
-```
-
-**API routes (requires Supabase):**
-```bash
-# Register a clawbot (no auth needed)
-curl -X POST http://localhost:3000/api/clawbots/register \
-  -H "Content-Type: application/json" \
-  -d '{"publicKey":"ed25519:dGVzdA==","name":"test-bot"}'
-
-# Claim with dev auth (auto-generates mock JWT in dev mode)
-curl -X POST http://localhost:3000/api/clawbots/claim \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJpc3MiOiJkZXYtbW9kZSIsInN1YiI6ImRldi1hbGllbi11c2VyLTAwMDAwIiwiYXVkIjoib3BlbmNsYXctbGlua2VyIiwiaWF0IjoxNzM4OTcwMDAwLCJleHAiOjk5OTk5OTk5OTl9.dev" \
-  -d '{"claimCode":"<code-from-register>"}'
-
-# List bots (same dev JWT)
-curl http://localhost:3000/api/clawbots \
-  -H "Authorization: Bearer eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJpc3MiOiJkZXYtbW9kZSIsInN1YiI6ImRldi1hbGllbi11c2VyLTAwMDAwIiwiYXVkIjoib3BlbmNsYXctbGlua2VyIiwiaWF0IjoxNzM4OTcwMDAwLCJleHAiOjk5OTk5OTk5OTl9.dev"
-```
-
-**Identity SDK:**
-```bash
-# Requires the dev server + Supabase running
-BOT_NAME=test-bot LINKER_URL=http://localhost:3000 npx tsx packages/identity/src/index.ts
-```
-
-### What Requires Setup
-
-| Feature | Requires |
-|---------|----------|
-| UI rendering, page navigation | Nothing (works out of the box) |
-| Health check + public keys | `ATTESTATION_PUBLIC_KEY` in .env.local |
-| Bot registration, claiming, listing | Supabase project + tables created |
-| Attestation signing | `ATTESTATION_PRIVATE_KEY` + `ATTESTATION_PUBLIC_KEY` |
-| Full claim flow (UI -> API -> attestation) | Supabase + attestation keys |
-| Identity SDK demo | Supabase + dev server running |
-| Deploy (actual provisioning) | Not implemented (stub only) |
-| Alien app integration | Register in Alien Developer Portal + deploy to public URL |
-
-### Supabase Setup
-
-1. Create a Supabase project at [supabase.com](https://supabase.com)
-2. Run the migration SQL in the SQL editor: `supabase/migrations/001_initial.sql`
-3. Copy the project URL and service role key into `.env.local`
-
-### What's Stubbed / Not Yet Done
-
-- **Deploy flow**: API creates a `deploy_jobs` record but doesn't provision anything. The progress stepper stays on step 1.
-- **Rate limiting**: No rate limiting on the claim endpoint yet.
-- **Alien app testing**: Requires registering the mini app in the [Alien Developer Portal](https://dev.alien.org/) and deploying to a public URL.
-- **On-chain registration**: UI preview only ("Coming Soon" badge). ERC-8004 integration is Layer 3.
-
-## Project Structure
+Install the plugin once:
 
 ```
-alien_linker/
-├── apps/mini-app/          # Next.js 15 (frontend + API routes)
-│   ├── app/                # Pages + API route handlers
-│   ├── components/         # Terminal-style UI components
-│   ├── hooks/              # React hooks (auth, clawbots, claim, deploy)
-│   └── lib/                # Server utils (auth, attestation, supabase)
-├── packages/identity/      # @alienclaw/identity — clawbot SDK
-│   └── src/                # Keypair, register, attestation, Hono server
-├── supabase/migrations/    # Database schema SQL
-├── scripts/                # Key generation
-└── DOCS/                   # PRD, architecture docs
+/plugin marketplace add nembal/alien_linker
+/plugin install alienclaw@nembal-alien-linker
 ```
 
-## Linking an Agent
-
-### Claude Code (recommended)
-
-If your agent uses Claude Code, run:
+Then run in any agent project:
 
 ```
-/alienclaw-setup https://your-linker.vercel.app
+/alienclaw:setup https://your-app.vercel.app
 ```
+
+The skill installs the identity SDK from GitHub, wires up `initIdentity()`, runs it, and shows you a 6-digit claim code. Enter the code in the mini app to link the agent.
 
 ### Any AI agent
 
@@ -136,7 +36,7 @@ npm install ./alienclaw-identity
 
 Then add to startup:
 import { initIdentity } from "@alienclaw/identity"
-await initIdentity({ name: "my-agent", linkerUrl: "https://your-linker.vercel.app" })
+await initIdentity({ name: "my-agent", linkerUrl: "https://your-app.vercel.app" })
 
 Run it and show me the 6-digit claim code.
 ```
@@ -144,7 +44,6 @@ Run it and show me the 6-digit claim code.
 ### Manual install
 
 ```bash
-# Install from GitHub
 git clone --depth 1 https://github.com/nembal/alien_linker.git /tmp/alienclaw-tmp
 cp -r /tmp/alienclaw-tmp/packages/identity ./alienclaw-identity
 rm -rf /tmp/alienclaw-tmp
@@ -155,51 +54,146 @@ npm install ./alienclaw-identity
 import { initIdentity } from "@alienclaw/identity";
 
 const identity = await initIdentity({
-  name: "my-research-bot",
-  endpoint: "https://my-vps:3001",
-  linkerUrl: "https://your-linker.vercel.app",
+  name: "my-agent",
+  linkerUrl: "https://your-app.vercel.app",
 });
-
-// Shows claim code in terminal
-// Starts identity server on :3001 with:
-//   GET  /identity    — returns attestation
-//   POST /challenge   — signs nonce with private key
-//   POST /attestation — receives attestation from backend
+// Shows 6-digit claim code in terminal
+// Starts identity server on :3001
 ```
+
+---
+
+## Deploy the Linker
+
+### Vercel
+
+1. Import `nembal/alien_linker` on [vercel.com/new](https://vercel.com/new)
+2. Set **Root Directory** to `apps/mini-app`
+3. Add environment variables (see below)
+4. Deploy
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key |
+| `ATTESTATION_PRIVATE_KEY` | Yes | ed25519 private key (base64) — run `npm run generate-keys` |
+| `ATTESTATION_PUBLIC_KEY` | Yes | ed25519 public key (base64) |
+| `NEXT_PUBLIC_APP_URL` | No | App URL (defaults to Vercel URL, used in attestation `issuedBy`) |
+
+### Supabase Setup
+
+1. Create a project at [supabase.com](https://supabase.com)
+2. Open the SQL editor, paste `supabase/migrations/001_initial.sql`, run it
+3. Copy the project URL + service role key into Vercel env vars
+
+### Generate Attestation Keys
+
+```bash
+npm run generate-keys
+# Outputs ATTESTATION_PRIVATE_KEY and ATTESTATION_PUBLIC_KEY
+# Add both to Vercel environment variables
+```
+
+---
+
+## Local Development
+
+```bash
+npm install
+
+# Generate keys (first time only)
+npm run generate-keys
+# Copy output into apps/mini-app/.env.local
+
+cp .env.example apps/mini-app/.env.local
+# Fill in Supabase credentials + keys
+
+npm run dev
+# http://localhost:3000
+```
+
+**What works without Supabase:**
+- All 7 pages render (dashboard, claim, deploy, bot detail, etc.)
+- Health check: `curl http://localhost:3000/api/health`
+- Public key: `curl http://localhost:3000/.well-known/alienclaw-keys.json`
+
+**What needs Supabase:**
+- Bot registration, claiming, listing
+- Full claim flow end-to-end
+- Deploy jobs
+
+---
+
+## Project Structure
+
+```
+alien_linker/
+├── apps/mini-app/            # Next.js 15 — frontend + API routes
+│   ├── app/                  # Pages + API handlers
+│   ├── components/           # Terminal-style UI (8 primitives)
+│   ├── hooks/                # React hooks (auth, clawbots, claim, deploy)
+│   └── lib/                  # Auth, attestation crypto, Supabase client
+├── packages/identity/        # @alienclaw/identity — agent SDK
+│   └── src/                  # Keypair, register, attestation, Hono server
+├── plugins/alienclaw/        # Claude Code plugin (distributable)
+│   ├── .claude-plugin/       # Plugin manifest
+│   └── skills/setup/         # /alienclaw:setup skill
+├── marketplace.json          # Makes this repo a Claude Code marketplace
+├── supabase/migrations/      # Database schema
+├── scripts/                  # Key generation
+└── DOCS/                     # PRD, architecture
+```
+
+## Claude Code Plugin
+
+This repo doubles as a **Claude Code plugin marketplace**. The `alienclaw` plugin gives any Claude Code user the `/alienclaw:setup` skill — a one-command way to add identity linking to their agent.
+
+**How it works:**
+1. User runs `/plugin marketplace add nembal/alien_linker`
+2. User runs `/plugin install alienclaw@nembal-alien-linker`
+3. Plugin is cached locally — available in any project
+4. `/alienclaw:setup <linker-url>` clones the identity SDK from GitHub, installs it, wires up `initIdentity()`, and displays the claim code
+
+**Plugin structure:**
+```
+plugins/alienclaw/
+├── .claude-plugin/plugin.json   # name, version, description
+└── skills/setup/SKILL.md        # The skill definition
+```
+
+---
 
 ## API Endpoints
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/clawbots/register` | None | Clawbot self-registers, gets claim code |
-| `POST` | `/api/clawbots/claim` | JWT | Claim a clawbot with 6-digit code |
-| `GET` | `/api/clawbots` | JWT | List user's claimed clawbots |
-| `GET` | `/api/clawbots/[id]` | JWT | Get clawbot details |
-| `POST` | `/api/clawbots/[id]/refresh-code` | JWT | Generate new claim code |
+| `POST` | `/api/clawbots/register` | None | Agent self-registers, gets claim code |
+| `POST` | `/api/clawbots/claim` | JWT | Claim agent with 6-digit code |
+| `GET` | `/api/clawbots` | JWT | List user's claimed agents |
+| `GET` | `/api/clawbots/[id]` | JWT | Agent details |
+| `POST` | `/api/clawbots/[id]/refresh-code` | JWT | New claim code |
 | `POST` | `/api/deploy` | JWT | Create deploy job (stub) |
-| `GET` | `/api/deploy/[id]` | JWT | Poll deploy job status |
+| `GET` | `/api/deploy/[id]` | JWT | Poll deploy status |
 | `GET` | `/api/health` | None | Health check |
-| `GET` | `/.well-known/alienclaw-keys.json` | None | Backend's public signing key (JWK) |
-
-## Environment Variables
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL=         # Supabase project URL
-SUPABASE_SERVICE_ROLE_KEY=        # Supabase service role key
-ATTESTATION_PRIVATE_KEY=          # ed25519 private key (base64)
-ATTESTATION_PUBLIC_KEY=           # ed25519 public key (base64)
-NEXT_PUBLIC_APP_URL=              # App URL (used in attestation issuedBy)
-```
+| `GET` | `/.well-known/alienclaw-keys.json` | None | Public signing key (JWK) |
 
 ## Tech Stack
 
-- **Runtime**: Node.js 18+ (also works with Bun)
 - **Frontend**: Next.js 15 (App Router), React 19, Tailwind CSS v4, framer-motion
 - **Alien SDK**: `@alien_org/react`, `@alien_org/auth-client`, `@alien_org/bridge`
 - **Backend**: Next.js API routes, Supabase (Postgres)
 - **Crypto**: `@noble/ed25519` for attestation signing
-- **Clawbot SDK**: TypeScript, Hono, `@noble/ed25519`
-- **Design**: Terminal-style UI (JetBrains Mono, CRT scanlines, green/cyan glow)
+- **Agent SDK**: TypeScript, Hono, `@noble/ed25519`
+- **Design**: Terminal UI (JetBrains Mono, CRT scanlines, green/cyan glow)
+
+## What's Not Done Yet
+
+- **Deploy flow**: Creates a DB record but doesn't provision anything (stub)
+- **Rate limiting**: No rate limiting on register/claim endpoints
+- **Alien Developer Portal**: Mini app not registered yet
+- **On-chain registration**: UI preview only ("Coming Soon"), ERC-8004 is Layer 3
 
 ## Roadmap
 
