@@ -20,15 +20,15 @@ export function useClawbots() {
     if (token) {
       try {
         remote = await apiFetch<Clawbot[]>("/api/clawbots", token);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load clawbots");
+      } catch {
+        // Silently fail — local agents still show up
       }
     }
 
-    // Merge in locally-deployed fake agents
-    const fake = getFakeAgents();
+    // Merge in locally-deployed agents
+    const local = getFakeAgents();
     const remoteIds = new Set(remote.map((b) => b.clawbotId));
-    const merged = [...remote, ...fake.filter((f) => !remoteIds.has(f.clawbotId))];
+    const merged = [...remote, ...local.filter((a) => !remoteIds.has(a.clawbotId))];
 
     setClawbots(merged);
     setLoading(false);
