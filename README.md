@@ -8,10 +8,10 @@ An Alien mini app that lets users claim, manage, and deploy clawbots using ed255
 
 ```bash
 # Install dependencies
-bun install
+npm install
 
 # Generate attestation signing keys
-bun run scripts/generate-keys.ts
+npm run generate-keys
 # Copy the output into .env.local
 
 # Create .env.local from the example
@@ -19,16 +19,18 @@ cp .env.example apps/mini-app/.env.local
 # Fill in your Supabase credentials + generated keys
 
 # Run the dev server
-bun dev
+npm run dev
 # App runs at http://localhost:3000
 ```
+
+> **bolt.dev / StackBlitz users**: This project works out of the box — just open it and run `npm install && npm run dev`. A `.stackblitzrc` is included.
 
 ## Testing Guide
 
 ### What Works Right Now
 
 **UI (no Supabase needed):**
-- `bun dev` starts the app at localhost:3000
+- `npm run dev` starts the app at localhost:3000
 - Dashboard page renders with terminal UI, ASCII header, empty state
 - `/claim` page renders with the 6-digit code input (try typing, pasting, arrow keys)
 - `/claim/success` page renders with animated checkmark
@@ -66,7 +68,7 @@ curl http://localhost:3000/api/clawbots \
 **Identity SDK:**
 ```bash
 # Requires the dev server + Supabase running
-BOT_NAME=test-bot LINKER_URL=http://localhost:3000 bun run packages/identity/src/index.ts
+BOT_NAME=test-bot LINKER_URL=http://localhost:3000 npx tsx packages/identity/src/index.ts
 ```
 
 ### What Requires Setup
@@ -111,9 +113,43 @@ alien_linker/
 └── DOCS/                   # PRD, architecture docs
 ```
 
-## Clawbot SDK
+## Linking an Agent
 
-Install `@alienclaw/identity` on your agent to integrate with the linker:
+### Claude Code (recommended)
+
+If your agent uses Claude Code, run:
+
+```
+/alienclaw-setup https://your-linker.vercel.app
+```
+
+### Any AI agent
+
+Copy this prompt and paste it into your agent's chat:
+
+```
+Set up AlienClaw identity linking. Install the SDK:
+git clone --depth 1 https://github.com/nembal/alien_linker.git /tmp/alienclaw-tmp
+cp -r /tmp/alienclaw-tmp/packages/identity ./alienclaw-identity
+rm -rf /tmp/alienclaw-tmp
+npm install ./alienclaw-identity
+
+Then add to startup:
+import { initIdentity } from "@alienclaw/identity"
+await initIdentity({ name: "my-agent", linkerUrl: "https://your-linker.vercel.app" })
+
+Run it and show me the 6-digit claim code.
+```
+
+### Manual install
+
+```bash
+# Install from GitHub
+git clone --depth 1 https://github.com/nembal/alien_linker.git /tmp/alienclaw-tmp
+cp -r /tmp/alienclaw-tmp/packages/identity ./alienclaw-identity
+rm -rf /tmp/alienclaw-tmp
+npm install ./alienclaw-identity
+```
 
 ```typescript
 import { initIdentity } from "@alienclaw/identity";
@@ -121,7 +157,7 @@ import { initIdentity } from "@alienclaw/identity";
 const identity = await initIdentity({
   name: "my-research-bot",
   endpoint: "https://my-vps:3001",
-  linkerUrl: "https://alienclaw-linker.vercel.app",
+  linkerUrl: "https://your-linker.vercel.app",
 });
 
 // Shows claim code in terminal
@@ -157,7 +193,7 @@ NEXT_PUBLIC_APP_URL=              # App URL (used in attestation issuedBy)
 
 ## Tech Stack
 
-- **Runtime**: Bun
+- **Runtime**: Node.js 18+ (also works with Bun)
 - **Frontend**: Next.js 15 (App Router), React 19, Tailwind CSS v4, framer-motion
 - **Alien SDK**: `@alien_org/react`, `@alien_org/auth-client`, `@alien_org/bridge`
 - **Backend**: Next.js API routes, Supabase (Postgres)

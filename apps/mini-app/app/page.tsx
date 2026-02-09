@@ -12,8 +12,20 @@ import { PageTransition } from "@/components/layout/page-transition";
 import { CopyBlock } from "@/components/ui/copy-block";
 import { useClawbots } from "@/hooks/use-clawbots";
 
-const QUICK_PROMPT = (linkerUrl: string) =>
-  `Install @alienclaw/identity (bun add @alienclaw/identity) and set up identity linking. Add initIdentity({ name: "my-agent", linkerUrl: "${linkerUrl}" }) to your startup. Run it and show me the 6-digit claim code.`;
+const AGENT_PROMPT = (linkerUrl: string) =>
+  `Set up AlienClaw identity linking on this machine so I can link you to my Alien account.
+
+1. Install the SDK:
+   git clone --depth 1 https://github.com/nembal/alien_linker.git /tmp/alienclaw-tmp
+   cp -r /tmp/alienclaw-tmp/packages/identity ./alienclaw-identity
+   rm -rf /tmp/alienclaw-tmp
+   npm install ./alienclaw-identity
+
+2. Add to your startup:
+   import { initIdentity } from "@alienclaw/identity"
+   await initIdentity({ name: "my-agent", linkerUrl: "${linkerUrl}" })
+
+3. Run it and show me the 6-digit claim code.`;
 
 const ASCII_ROBOT = `
     ╭─────╮
@@ -85,7 +97,7 @@ export default function Dashboard() {
               {ASCII_ROBOT}
             </pre>
             <div className="mt-2 text-center text-sm text-terminal-text">
-              <TypingText text="No agents linked yet. Run the identity SDK on your agent, then claim it here." />
+              <TypingText text="No agents linked yet. Use /alienclaw-setup or paste the prompt below into your agent." />
             </div>
           </TerminalCard>
         )}
@@ -93,16 +105,20 @@ export default function Dashboard() {
 
       {/* Quick Setup Hint */}
       {clawbots.length === 0 && !loading && (
-        <TerminalCard glow="cyan">
-          <div className="space-y-3 text-xs">
-            <p className="text-terminal-text">
-              Paste this prompt into your agent&apos;s chat to get started:
-            </p>
-            <CopyBlock text={QUICK_PROMPT(linkerUrl)} />
-            <p className="text-terminal-dim">
-              Or use the Claude Code skill:{" "}
-              <span className="text-terminal-cyan">/alienclaw-setup</span>
-            </p>
+        <TerminalCard title="setup" glow="cyan">
+          <div className="space-y-4 text-xs">
+            <div className="space-y-1.5">
+              <p className="text-terminal-dim uppercase tracking-wider">
+                Claude Code
+              </p>
+              <CopyBlock text="/alienclaw-setup" />
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-terminal-dim uppercase tracking-wider">
+                Or paste this to any agent
+              </p>
+              <CopyBlock text={AGENT_PROMPT(linkerUrl)} />
+            </div>
           </div>
         </TerminalCard>
       )}
