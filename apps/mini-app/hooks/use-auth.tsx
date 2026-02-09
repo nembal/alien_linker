@@ -5,6 +5,7 @@ import {
   useContext,
   useState,
   useCallback,
+  useEffect,
   useMemo,
   type ReactNode,
 } from "react";
@@ -31,7 +32,7 @@ const AuthContext = createContext<AuthContextValue>({
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { authToken, isBridgeAvailable } = useAlien();
+  const { authToken, isBridgeAvailable, ready } = useAlien();
   const [signed, setSigned] = useState(false);
   const [signing, setSigning] = useState(false);
 
@@ -50,17 +51,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Simulate signature verification delay
     await new Promise((r) => setTimeout(r, 1800));
 
-    if (token) {
-      setSigned(true);
-      setSigning(false);
-      return true;
-    }
-
-    // Dev/demo mode — still unlock
     setSigned(true);
     setSigning(false);
+
+    // Signal the host app that we're ready to be displayed
+    ready();
+
     return true;
-  }, [signed, token]);
+  }, [signed, ready]);
+
+  // Auto-sign when running inside the Alien app with a real token
+  useEffect(() => {
+    if (isBridgeAvailable && authToken && !signed && !signing) {
+      sign();
+    }
+  }, [isBridgeAvailable, authToken, signed, signing, sign]);
 
   const value = useMemo<AuthContextValue>(
     () => ({ token, isBridgeAvailable, signed, sign, signing }),

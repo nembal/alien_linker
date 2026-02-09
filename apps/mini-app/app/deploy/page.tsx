@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { useEvent } from "@alien_org/react";
+import { send } from "@alien_org/bridge";
 import { TerminalButton } from "@/components/ui/terminal-button";
 import { TerminalInput } from "@/components/ui/terminal-input";
 import { TerminalCard } from "@/components/ui/terminal-card";
@@ -107,6 +109,23 @@ export default function DeployPage() {
   };
 
   const deploying = phase === "deploying";
+
+  // Show native back button when not on config, handle back navigation
+  useEffect(() => {
+    if (phase !== "config") {
+      send("host.back.button:toggle", { visible: true });
+    } else {
+      send("host.back.button:toggle", { visible: false });
+    }
+  }, [phase]);
+
+  useEvent("host.back.button:clicked", () => {
+    if (phase === "signing" && signProgress === 0) {
+      setPhase("config");
+    } else if (done) {
+      router.push("/");
+    }
+  });
 
   // Step through the fake deployment
   useEffect(() => {
