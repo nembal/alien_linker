@@ -10,6 +10,9 @@ import { TerminalCard } from "@/components/ui/terminal-card";
 import { GlowText } from "@/components/ui/glow-text";
 import { PageTransition } from "@/components/layout/page-transition";
 import { addFakeAgent } from "@/lib/fake-agents";
+import { useAuth } from "@/hooks/use-auth";
+
+type Phase = "config" | "signing" | "deploying";
 
 const DEPLOY_STEPS = [
   { label: "Provisioning container", duration: 4000, logs: [
@@ -60,9 +63,11 @@ function generateId() {
 
 export default function DeployPage() {
   const router = useRouter();
+  const { sign } = useAuth();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [deploying, setDeploying] = useState(false);
+  const [phase, setPhase] = useState<Phase>("config");
+  const [signProgress, setSignProgress] = useState(0); // 0=idle, 1=requesting, 2=confirmed, 3=done
   const [currentStep, setCurrentStep] = useState(0);
   const [visibleLogs, setVisibleLogs] = useState<string[]>([]);
   const [done, setDone] = useState(false);
@@ -78,11 +83,30 @@ export default function DeployPage() {
 
   const handleDeploy = () => {
     if (!name.trim()) return;
-    setDeploying(true);
+    setPhase("signing");
+    setSignProgress(0);
+  };
+
+  const handleSign = async () => {
+    setSignProgress(1);
+
+    // Step 1: requesting signature
+    await new Promise((r) => setTimeout(r, 1200));
+    setSignProgress(2);
+
+    // Step 2: verifying
+    await sign();
+    setSignProgress(3);
+
+    // Step 3: brief pause then start deploy
+    await new Promise((r) => setTimeout(r, 800));
+    setPhase("deploying");
     setCurrentStep(0);
     setVisibleLogs([]);
     setDone(false);
   };
+
+  const deploying = phase === "deploying";
 
   // Step through the fake deployment
   useEffect(() => {
@@ -158,7 +182,7 @@ export default function DeployPage() {
         &larr; Back
       </Link>
 
-      {!deploying ? (
+      {phase === "config" ? (
         /* Config form */
         <>
           <div className="space-y-1">
@@ -207,6 +231,129 @@ export default function DeployPage() {
           <p className="text-center text-[11px] text-terminal-dim">
             Auto-claimed to your Alien identity.
           </p>
+        </>
+      ) : phase === "signing" ? (
+        /* Signing step */
+        <>
+          <div className="space-y-1">
+            <GlowText as="h1" color="amber" className="text-lg font-bold">
+              Sign Deployment
+            </GlowText>
+            <p className="text-xs text-terminal-dim">
+              Authorize deployment of <span className="text-terminal-text">{name.trim()}</span> with your Alien ID.
+            </p>
+          </div>
+
+          <TerminalCard title="deploy.auth" glow="amber">
+            <div className="space-y-4">
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-terminal-dim">Agent</span>
+                  <span className="text-terminal-text">{name.trim()}</span>
+                </div>
+                {description.trim() && (
+                  <div className="flex justify-between">
+                    <span className="text-terminal-dim">Description</span>
+                    <span className="text-terminal-text">{description.trim()}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-terminal-dim">Template</span>
+                  <span className="text-terminal-text">Default Agent</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-terminal-dim">Owner</span>
+                  <GlowText color="green" className="text-xs">Your Alien ID</GlowText>
+                </div>
+              </div>
+
+              <div className="h-px bg-terminal-border" />
+
+              {signProgress === 0 && (
+                <p className="text-center text-[11px] text-terminal-amber">
+                  This deployment will be cryptographically signed with your identity.
+                </p>
+              )}
+
+              <AnimatePresence mode="wait">
+                {signProgress >= 1 && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="space-y-2"
+                  >
+                    {/* Step: Requesting */}
+                    <div className="flex items-center gap-2 text-xs">
+                      <div className="flex h-4 w-4 shrink-0 items-center justify-center">
+                        {signProgress > 1 ? (
+                          <span className="text-terminal-green glow-green">&#10003;</span>
+                        ) : (
+                          <motion.span
+                            className="inline-block h-2.5 w-2.5 rounded-full border-[1.5px] border-terminal-amber border-t-transparent"
+                            animate={{ rotate: 360 }}
+                            transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }}
+                          />
+                        )}
+                      </div>
+                      <span className={signProgress > 1 ? "text-terminal-green" : "text-terminal-amber"}>
+                        Requesting signature{signProgress === 1 && "..."}
+                      </span>
+                    </div>
+
+                    {/* Step: Verifying */}
+                    {signProgress >= 2 && (
+                      <motion.div
+                        initial={{ opacity: 0, x: -6 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="flex items-center gap-2 text-xs"
+                      >
+                        <div className="flex h-4 w-4 shrink-0 items-center justify-center">
+                          {signProgress > 2 ? (
+                            <span className="text-terminal-green glow-green">&#10003;</span>
+                          ) : (
+                            <motion.span
+                              className="inline-block h-2.5 w-2.5 rounded-full border-[1.5px] border-terminal-amber border-t-transparent"
+                              animate={{ rotate: 360 }}
+                              transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }}
+                            />
+                          )}
+                        </div>
+                        <span className={signProgress > 2 ? "text-terminal-green" : "text-terminal-amber"}>
+                          Verifying identity{signProgress === 2 && "..."}
+                        </span>
+                      </motion.div>
+                    )}
+
+                    {/* Step: Confirmed */}
+                    {signProgress >= 3 && (
+                      <motion.div
+                        initial={{ opacity: 0, x: -6 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="flex items-center gap-2 text-xs"
+                      >
+                        <div className="flex h-4 w-4 shrink-0 items-center justify-center">
+                          <span className="text-terminal-green glow-green">&#10003;</span>
+                        </div>
+                        <span className="text-terminal-green">
+                          Deployment authorized
+                        </span>
+                      </motion.div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </TerminalCard>
+
+          {signProgress === 0 && (
+            <TerminalButton
+              variant="primary"
+              className="w-full"
+              onClick={handleSign}
+            >
+              Sign &amp; Deploy
+            </TerminalButton>
+          )}
         </>
       ) : (
         /* Deployment animation */
