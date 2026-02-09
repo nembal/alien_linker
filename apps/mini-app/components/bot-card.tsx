@@ -4,6 +4,7 @@ import Link from "next/link";
 import { TerminalCard } from "@/components/ui/terminal-card";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { GlowText } from "@/components/ui/glow-text";
+import { nameToSlug } from "@/lib/fake-agents";
 import type { Clawbot } from "@/lib/types";
 
 interface BotCardProps {
@@ -17,8 +18,10 @@ export function BotCard({ bot }: BotCardProps) {
     offline: "offline" as const,
   };
 
+  const slug = nameToSlug(bot.name);
+
   return (
-    <Link href={`/bot/${bot.clawbotId}`}>
+    <Link href={`/agent/${slug}`}>
       <TerminalCard className="transition-all hover:border-terminal-green/40 hover:shadow-[0_0_20px_rgba(0,255,65,0.1)]">
         <div className="flex items-start justify-between">
           <div className="space-y-1">

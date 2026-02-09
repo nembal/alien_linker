@@ -11,7 +11,8 @@ import { TerminalInput } from "@/components/ui/terminal-input";
 import { TerminalCard } from "@/components/ui/terminal-card";
 import { GlowText } from "@/components/ui/glow-text";
 import { PageTransition } from "@/components/layout/page-transition";
-import { addFakeAgent } from "@/lib/fake-agents";
+import { addFakeAgent, nameToSlug } from "@/lib/fake-agents";
+import { CopyBlock } from "@/components/ui/copy-block";
 import { useAuth } from "@/hooks/use-auth";
 
 type Phase = "config" | "signing" | "deploying";
@@ -73,7 +74,9 @@ export default function DeployPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [visibleLogs, setVisibleLogs] = useState<string[]>([]);
   const [done, setDone] = useState(false);
+  const [createdSlug, setCreatedSlug] = useState("");
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const appUrl = typeof window !== "undefined" ? window.location.origin : "";
 
   const scrollToBottom = useCallback(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -133,10 +136,11 @@ export default function DeployPage() {
     if (currentStep >= DEPLOY_STEPS.length) {
       // All done — create fake agent and mark done
       const clawbotId = generateId();
+      const trimmedName = name.trim();
       addFakeAgent({
         id: clawbotId,
         clawbotId,
-        name: name.trim(),
+        name: trimmedName,
         description: description.trim() || null,
         endpoint: null,
         publicKey: "ed25519:" + btoa(Math.random().toString()).slice(0, 32),
@@ -155,6 +159,7 @@ export default function DeployPage() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
+      setCreatedSlug(nameToSlug(trimmedName));
       setDone(true);
       return;
     }
@@ -469,18 +474,29 @@ export default function DeployPage() {
               className="space-y-3"
             >
               <TerminalCard glow="green">
-                <div className="text-center space-y-1">
+                <div className="text-center space-y-1.5">
                   <p className="text-sm text-terminal-green glow-green font-semibold">
-                    Agent linked successfully
+                    Agent deployed
                   </p>
                   <p className="text-[11px] text-terminal-dim">
-                    {name.trim()} is now verified and linked to your identity.
+                    {name.trim()} is live. Finish setup to activate it.
                   </p>
                 </div>
               </TerminalCard>
 
+              {/* Agent URL */}
+              <TerminalCard title="agent url" glow="cyan">
+                <CopyBlock text={`${appUrl}/agent/${createdSlug}`} />
+              </TerminalCard>
+
+              <Link href={`/agent/${createdSlug}`} className="block">
+                <TerminalButton variant="primary" className="w-full">
+                  Finish Setup
+                </TerminalButton>
+              </Link>
+
               <TerminalButton
-                variant="primary"
+                variant="ghost"
                 className="w-full"
                 onClick={handleGoHome}
               >
